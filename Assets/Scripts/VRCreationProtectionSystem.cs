@@ -1,4 +1,4 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -23,24 +23,24 @@ public class VRCreationProtectionSystem : MonoBehaviour
     [Header("Creation Tracking")]
     [SerializeField] private bool enableCreationTracking = true;
     [SerializeField] private float brushChangeDetectionRadius = 0.1f;
-    [SerializeField] private int minimumCreationActions = 5; // ÃÖ¼Ò Ã¢ÀÛ Çàµ¿ ¼ö
+    [SerializeField] private int minimumCreationActions = 5; // ìµœì†Œ ì°½ì‘ í–‰ë™ ìˆ˜
 
     [Header("VR Art Protection Settings")]
-    [SerializeField] private int artworkResolution = 1024; // ¾ÆÆ®¿öÅ©´Â °íÇØ»óµµ
+    [SerializeField] private int artworkResolution = 1024; // ì•„íŠ¸ì›Œí¬ëŠ” ê³ í•´ìƒë„
     [SerializeField] private float creationComplexityThreshold = 0.3f;
     [SerializeField] private bool enableVersionControl = true;
 
     [Header("Auto Protection Triggers")]
     [SerializeField] private bool protectOnBrushChange = true;
     [SerializeField] private bool protectOnCreationMilestone = true;
-    [SerializeField] private float autoProtectionInterval = 180f; // 3ºĞ¸¶´Ù
+    [SerializeField] private float autoProtectionInterval = 180f; // 3ë¶„ë§ˆë‹¤
     [SerializeField] private bool protectOnSessionEnd = true;
 
     [Header("VR Simulation")]
     [SerializeField] private bool useVRSimulation = true;
     [SerializeField] private float simulationRadius = 2f;
 
-    // VR Ã¢ÀÛ µ¥ÀÌÅÍ
+    // VR ì°½ì‘ ë°ì´í„°
     [System.Serializable]
     public class CreationMetadata
     {
@@ -51,25 +51,25 @@ public class VRCreationProtectionSystem : MonoBehaviour
         public DateTime lastModificationTime;
         public int versionNumber;
         public int totalBrushStrokes;
-        public float creationDuration; // ÃÑ Ã¢ÀÛ ½Ã°£ (ÃÊ)
-        public Vector3 primaryCreationArea; // ÁÖ¿ä Ã¢ÀÛ ¿µ¿ª
+        public float creationDuration; // ì´ ì°½ì‘ ì‹œê°„ (ì´ˆ)
+        public Vector3 primaryCreationArea; // ì£¼ìš” ì°½ì‘ ì˜ì—­
         public List<string> toolsUsed;
         public float artworkComplexity;
         public string sessionID;
     }
 
-    // 6¹æÇâ Ä«¸Ş¶ó Á¤ÀÇ
+    // 6ë°©í–¥ ì¹´ë©”ë¼ ì •ì˜
     public enum ArtViewDirection
     {
-        MainView = 0,      // ÁÖ¿ä °¨»ó °¢µµ
-        DetailView = 1,    // ¼¼ºÎ µğÅ×ÀÏ °¢µµ
-        ProfileLeft = 2,   // ÁÂÃø ÇÁ·ÎÇÊ
-        ProfileRight = 3,  // ¿ìÃø ÇÁ·ÎÇÊ
-        TopView = 4,       // »ó´Ü ÀüÃ¼ ºä
-        BottomView = 5     // ÇÏ´Ü ±¸Á¶ ºä
+        MainView = 0,      // ì£¼ìš” ê°ìƒ ê°ë„
+        DetailView = 1,    // ì„¸ë¶€ ë””í…Œì¼ ê°ë„
+        ProfileLeft = 2,   // ì¢Œì¸¡ í”„ë¡œí•„
+        ProfileRight = 3,  // ìš°ì¸¡ í”„ë¡œí•„
+        TopView = 4,       // ìƒë‹¨ ì „ì²´ ë·°
+        BottomView = 5     // í•˜ë‹¨ êµ¬ì¡° ë·°
     }
 
-    // Ã¢ÀÛ º¸È£ °á°ú
+    // ì°½ì‘ ë³´í˜¸ ê²°ê³¼
     [System.Serializable]
     public class ArtworkProtectionResult
     {
@@ -83,14 +83,14 @@ public class VRCreationProtectionSystem : MonoBehaviour
         public bool readyForWatermarking;
     }
 
-    // ·»´õ¸µ ¹× ½Ã½ºÅÛ º¯¼öµé
+    // ë Œë”ë§ ë° ì‹œìŠ¤í…œ ë³€ìˆ˜ë“¤
     private Camera[] artViewCameras = new Camera[6];
     private Vector3[] optimalCameraPositions = new Vector3[6];
     private Vector3[] optimalCameraRotations = new Vector3[6];
     private Queue<RenderTexture> artRenderTexturePool = new Queue<RenderTexture>();
     private List<RenderTexture> activeArtRenderTextures = new List<RenderTexture>();
 
-    // Ã¢ÀÛ ÃßÀû º¯¼öµé
+    // ì°½ì‘ ì¶”ì  ë³€ìˆ˜ë“¤
     private CreationMetadata currentCreationData;
     private Vector3 lastBrushPosition = Vector3.zero;
     private string currentTool = "Default_Brush";
@@ -99,19 +99,19 @@ public class VRCreationProtectionSystem : MonoBehaviour
     private float lastProtectionTime;
     private List<Vector3> creationHotspots = new List<Vector3>();
 
-    // VR ½Ã¹Ä·¹ÀÌ¼Ç º¯¼öµé
+    // VR ì‹œë®¬ë ˆì´ì…˜ ë³€ìˆ˜ë“¤
     private float lastSimulationUpdate = 0f;
-    private float simulationUpdateInterval = 2f; // 2ÃÊ¸¶´Ù À§Ä¡ º¯°æ
+    private float simulationUpdateInterval = 2f; // 2ì´ˆë§ˆë‹¤ ìœ„ì¹˜ ë³€ê²½
 
-    // ÆÄÀÏ ÀúÀå °ü·Ã
+    // íŒŒì¼ ì €ì¥ ê´€ë ¨
     private List<string> protectedArtworks = new List<string>();
 
-    // ÀÌº¥Æ®
+    // ì´ë²¤íŠ¸
     public System.Action<ArtworkProtectionResult> OnArtworkProtected;
     public System.Action<CreationMetadata> OnCreationMilestoneReached;
     public System.Action<string> OnToolChanged;
 
-    // ¼º´É ¹× UI
+    // ì„±ëŠ¥ ë° UI
     private List<float> fpsHistory = new List<float>();
 
     void Start()
@@ -119,7 +119,7 @@ public class VRCreationProtectionSystem : MonoBehaviour
         InitializeVRArtSystem();
         InitializeCreationTracking();
 
-        // artworkContainer°¡ ¾øÀ¸¸é ¹İµå½Ã »ı¼º
+        // artworkContainerê°€ ì—†ìœ¼ë©´ ë°˜ë“œì‹œ ìƒì„±
         if (artworkContainer == null)
         {
             CreateSampleArtwork();
@@ -128,7 +128,7 @@ public class VRCreationProtectionSystem : MonoBehaviour
         SetupArtRenderingCameras();
         SetupRenderTexturePool();
 
-        Debug.Log($"VR ¾ÆÆ® Ã¢ÀÛ º¸È£ ½Ã½ºÅÛ ½ÃÀÛ - ¾ÆÆ¼½ºÆ®: {artistName}");
+        Debug.Log($"VR ì•„íŠ¸ ì°½ì‘ ë³´í˜¸ ì‹œìŠ¤í…œ ì‹œì‘ - ì•„í‹°ìŠ¤íŠ¸: {artistName}");
     }
 
     void Update()
@@ -138,13 +138,13 @@ public class VRCreationProtectionSystem : MonoBehaviour
         CheckProtectionTriggers();
         MonitorPerformance();
 
-        // ¼öµ¿ º¸È£ ½ÇÇà (VR ÄÁÆ®·Ñ·¯ ¶Ç´Â Å°º¸µå)
+        // ìˆ˜ë™ ë³´í˜¸ ì‹¤í–‰ (VR ì»¨íŠ¸ë¡¤ëŸ¬ ë˜ëŠ” í‚¤ë³´ë“œ)
         if (IsProtectionTriggerPressed())
         {
             StartCoroutine(ProtectCurrentArtwork("Manual_Protection"));
         }
 
-        // µµ±¸ º¯°æ Å×½ºÆ® (°³¹ß¿ë)
+        // ë„êµ¬ ë³€ê²½ í…ŒìŠ¤íŠ¸ (ê°œë°œìš©)
         if (IsToolChangePressed()) SimulateToolChange();
         if (IsBrushStrokePressed()) SimulateBrushStroke();
     }
@@ -153,10 +153,10 @@ public class VRCreationProtectionSystem : MonoBehaviour
 
     void InitializeVRArtSystem()
     {
-        // ¿¹¼ú ÀÛÇ°¿ë ÃÖÀûÈ­ ¼³Á¤
+        // ì˜ˆìˆ  ì‘í’ˆìš© ìµœì í™” ì„¤ì • (WAMì€ 256x256 ì‹¤í—˜í–ˆì§€ë§Œ, ê³ í•´ìƒë„ ê°€ëŠ¥ ë° VRì²˜ë¦¬ í•œê³„ ê³ ë ¤ 512,2048)
         artworkResolution = Mathf.Clamp(artworkResolution, 512, 2048);
 
-        // ¾ÆÆ®¿öÅ© Àü¿ë ·¹ÀÌ¾î ¼³Á¤
+        // ì•„íŠ¸ì›Œí¬ ì „ìš© ë ˆì´ì–´ ì„¤ì •
         if (artworkLayerMask == 0) artworkLayerMask = LayerMask.GetMask("Default");
 
         sessionStartTime = Time.time;
@@ -180,39 +180,39 @@ public class VRCreationProtectionSystem : MonoBehaviour
             sessionID = System.Guid.NewGuid().ToString("N")[..8]
         };
 
-        Debug.Log($"Ã¢ÀÛ ¼¼¼Ç ½ÃÀÛ - ID: {currentCreationData.sessionID}");
+        Debug.Log($"ì°½ì‘ ì„¸ì…˜ ì‹œì‘ - ID: {currentCreationData.sessionID}");
     }
 
     void SetupArtRenderingCameras()
     {
-        // ¿¹¼ú ÀÛÇ° °¨»ó¿¡ ÃÖÀûÈ­µÈ Ä«¸Ş¶ó °¢µµ ¼³Á¤
+        // ì˜ˆìˆ  ì‘í’ˆ ê°ìƒì— ìµœì í™”ëœ ì¹´ë©”ë¼ ê°ë„ ì„¤ì •
         float artDistance = CalculateOptimalViewingDistance();
 
-        // ÁÖ¿ä °¨»ó °¢µµ (Á¤¸é ¾à°£ ¿ì»ó´Ü)
+        // ì£¼ìš” ê°ìƒ ê°ë„ (ì •ë©´ ì•½ê°„ ìš°ìƒë‹¨)
         optimalCameraPositions[(int)ArtViewDirection.MainView] = new Vector3(1f, 0.8f, 2f).normalized * artDistance;
         optimalCameraRotations[(int)ArtViewDirection.MainView] = new Vector3(-15f, -25f, 0f);
 
-        // ¼¼ºÎ µğÅ×ÀÏ °¢µµ (°¡±î¿î °Å¸®)
+        // ì„¸ë¶€ ë””í…Œì¼ ê°ë„ (ê°€ê¹Œìš´ ê±°ë¦¬)
         optimalCameraPositions[(int)ArtViewDirection.DetailView] = new Vector3(0.5f, 0f, 1f).normalized * (artDistance * 0.7f);
         optimalCameraRotations[(int)ArtViewDirection.DetailView] = new Vector3(0f, -30f, 0f);
 
-        // ÁÂÃø ÇÁ·ÎÇÊ
+        // ì¢Œì¸¡ í”„ë¡œí•„
         optimalCameraPositions[(int)ArtViewDirection.ProfileLeft] = Vector3.left * artDistance;
         optimalCameraRotations[(int)ArtViewDirection.ProfileLeft] = new Vector3(0f, 90f, 0f);
 
-        // ¿ìÃø ÇÁ·ÎÇÊ
+        // ìš°ì¸¡ í”„ë¡œí•„
         optimalCameraPositions[(int)ArtViewDirection.ProfileRight] = Vector3.right * artDistance;
         optimalCameraRotations[(int)ArtViewDirection.ProfileRight] = new Vector3(0f, -90f, 0f);
 
-        // »ó´Ü ÀüÃ¼ ºä
+        // ìƒë‹¨ ì „ì²´ ë·°
         optimalCameraPositions[(int)ArtViewDirection.TopView] = Vector3.up * artDistance;
         optimalCameraRotations[(int)ArtViewDirection.TopView] = new Vector3(90f, 0f, 0f);
 
-        // ÇÏ´Ü ±¸Á¶ ºä
+        // í•˜ë‹¨ êµ¬ì¡° ë·°
         optimalCameraPositions[(int)ArtViewDirection.BottomView] = Vector3.down * artDistance;
         optimalCameraRotations[(int)ArtViewDirection.BottomView] = new Vector3(-90f, 0f, 0f);
 
-        // Ä«¸Ş¶ó »ı¼º ¹× ¼³Á¤
+        // ì¹´ë©”ë¼ ìƒì„± ë° ì„¤ì •
         for (int i = 0; i < 6; i++)
         {
             GameObject cameraGO = new GameObject($"ArtCamera_{(ArtViewDirection)i}");
@@ -221,49 +221,50 @@ public class VRCreationProtectionSystem : MonoBehaviour
             Camera cam = cameraGO.AddComponent<Camera>();
             cam.enabled = false;
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.1f, 0.1f, 0.15f, 1f); // ¾ÆÆ® Àü½Ã¿ë ¹è°æ
+            cam.backgroundColor = new Color(0.1f, 0.1f, 0.15f, 1f); // ì•„íŠ¸ ì „ì‹œìš© ë°°ê²½
             cam.orthographic = false;
-            cam.fieldOfView = (i == (int)ArtViewDirection.DetailView) ? 45f : 60f; // µğÅ×ÀÏ ºä´Â ´õ Á¼Àº ½Ã¾ß°¢
+            cam.fieldOfView = (i == (int)ArtViewDirection.DetailView) ? 45f : 60f; // ë””í…Œì¼ ë·°ëŠ” ë” ì¢ì€ ì‹œì•¼ê°
             cam.cullingMask = artworkLayerMask;
 
             artViewCameras[i] = cam;
         }
 
-        Debug.Log("VR ¾ÆÆ® °¨»ó¿ë 6¹æÇâ Ä«¸Ş¶ó ½Ã½ºÅÛ ÃÊ±âÈ­ ¿Ï·á");
+        Debug.Log("VR ì•„íŠ¸ ê°ìƒìš© 6ë°©í–¥ ì¹´ë©”ë¼ ì‹œìŠ¤í…œ ì´ˆê¸°í™” ì™„ë£Œ");
     }
 
     float CalculateOptimalViewingDistance()
     {
         if (artworkContainer == null)
         {
-            Debug.LogWarning("artworkContainer°¡ nullÀÔ´Ï´Ù. ±âº» °Å¸®¸¦ ¹İÈ¯ÇÕ´Ï´Ù.");
+            Debug.LogWarning("artworkContainerê°€ nullì…ë‹ˆë‹¤. ê¸°ë³¸ ê±°ë¦¬ë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.");
             return 3f;
         }
 
         Bounds bounds = GetArtworkBounds();
         float maxDimension = Mathf.Max(bounds.size.x, bounds.size.y, bounds.size.z);
 
-        // ¾ÆÆ®¿öÅ© Å©±â¿¡ µû¸¥ ÃÖÀû °¨»ó °Å¸®
+        // ì•„íŠ¸ì›Œí¬ í¬ê¸°ì— ë”°ë¥¸ ìµœì  ê°ìƒ ê±°ë¦¬
         return Mathf.Clamp(maxDimension * 2.5f, 2f, 8f);
     }
 
+    // Pool ë Œë”í…ìŠ¤ì²˜ ì´ˆê¸°í™” (Queue)
     void SetupRenderTexturePool()
     {
-        for (int i = 0; i < 8; i++) // ¾ÆÆ®¿öÅ©¿ëÀ¸·Î ´õ ¸¹Àº ÅØ½ºÃ³ ÁØºñ
+        for (int i = 0; i < 8; i++) // ì•„íŠ¸ì›Œí¬ìš©ìœ¼ë¡œ ë” ë§ì€ í…ìŠ¤ì²˜ ì¤€ë¹„
         {
             RenderTexture rt = CreateArtRenderTexture();
             artRenderTexturePool.Enqueue(rt);
         }
 
-        Debug.Log($"¾ÆÆ®¿öÅ© ·»´õÅØ½ºÃ³ Ç® ÃÊ±âÈ­: {artRenderTexturePool.Count}°³");
+        Debug.Log($"ì•„íŠ¸ì›Œí¬ ë Œë”í…ìŠ¤ì²˜ í’€ ì´ˆê¸°í™”: {artRenderTexturePool.Count}ê°œ");
     }
 
     RenderTexture CreateArtRenderTexture()
     {
         RenderTexture rt = new RenderTexture(artworkResolution, artworkResolution, 24);
         rt.format = RenderTextureFormat.ARGB32;
-        rt.filterMode = FilterMode.Trilinear; // ¾ÆÆ®¿öÅ©¿ë °íÇ°Áú ÇÊÅÍ¸µ
-        rt.antiAliasing = 4; // ¾ÆÆ®¿öÅ©¿ë ¾ÈÆ¼¾Ù¸®¾î½Ì
+        rt.filterMode = FilterMode.Trilinear; // ì•„íŠ¸ì›Œí¬ìš© ê³ í’ˆì§ˆ í•„í„°ë§
+        rt.antiAliasing = 4; // ì•„íŠ¸ì›Œí¬ìš© ì•ˆí‹°ì•¨ë¦¬ì–´ì‹±
         rt.Create();
         return rt;
     }
@@ -276,29 +277,29 @@ public class VRCreationProtectionSystem : MonoBehaviour
     {
         if (!enableCreationTracking) return;
 
-        // Ã¢ÀÛ ½Ã°£ ¾÷µ¥ÀÌÆ®
+        // ì°½ì‘ ì‹œê°„ ì—…ë°ì´íŠ¸
         currentCreationData.creationDuration = Time.time - sessionStartTime;
         currentCreationData.lastModificationTime = DateTime.Now;
 
-        // VR ÄÁÆ®·Ñ·¯ À§Ä¡ ¸ğ´ÏÅÍ¸µ
+        // VR ì»¨íŠ¸ë¡¤ëŸ¬ ìœ„ì¹˜ ëª¨ë‹ˆí„°ë§
         Vector3 currentBrushPosition;
 
         if (useVRSimulation)
         {
-            // ½Ã¹Ä·¹ÀÌ¼Ç ¸ğµå: ÁÖ±âÀûÀ¸·Î ºê·¯½Ã À§Ä¡ º¯°æ
+            // ì‹œë®¬ë ˆì´ì…˜ ëª¨ë“œ: ì£¼ê¸°ì ìœ¼ë¡œ ë¸ŒëŸ¬ì‹œ ìœ„ì¹˜ ë³€ê²½
             if (Time.time - lastSimulationUpdate > simulationUpdateInterval)
             {
                 currentBrushPosition = GetCurrentBrushPosition();
                 lastSimulationUpdate = Time.time;
 
-                // ½Ã¹Ä·¹ÀÌ¼Ç¿¡¼­´Â Ç×»ó À§Ä¡ º¯°æÀ¸·Î °£ÁÖ
+                // ì‹œë®¬ë ˆì´ì…˜ì—ì„œëŠ” í•­ìƒ ìœ„ì¹˜ ë³€ê²½ìœ¼ë¡œ ê°„ì£¼
                 OnBrushPositionChanged(currentBrushPosition);
                 lastBrushPosition = currentBrushPosition;
             }
         }
         else
         {
-            // ½ÇÁ¦ VR ¸ğµå: ±âÁ¸ ·ÎÁ÷
+            // ì‹¤ì œ VR ëª¨ë“œ: ê¸°ì¡´ ë¡œì§
             currentBrushPosition = GetCurrentBrushPosition();
 
             if (Vector3.Distance(currentBrushPosition, lastBrushPosition) > brushChangeDetectionRadius)
@@ -311,27 +312,27 @@ public class VRCreationProtectionSystem : MonoBehaviour
 
     Vector3 GetCurrentBrushPosition()
     {
-        // VR ½Ã¹Ä·¹ÀÌ¼Ç ¸ğµå »ç¿ë
+        // VR ì‹œë®¬ë ˆì´ì…˜ ëª¨ë“œ ì‚¬ìš©
         if (useVRSimulation)
         {
-            // artworkContainer°¡ ¾øÀ¸¸é ¸ÕÀú »ı¼º
+            // artworkContainerê°€ ì—†ìœ¼ë©´ ë¨¼ì € ìƒì„±
             if (artworkContainer == null)
             {
                 CreateSampleArtwork();
             }
 
-            // VR ÄÁÆ®·Ñ·¯ À§Ä¡ ½Ã¹Ä·¹ÀÌ¼Ç (¾ÆÆ®¿öÅ© ÁÖº¯ÀÇ ·£´ı À§Ä¡)
+            // VR ì»¨íŠ¸ë¡¤ëŸ¬ ìœ„ì¹˜ ì‹œë®¬ë ˆì´ì…˜ (ì•„íŠ¸ì›Œí¬ ì£¼ë³€ì˜ ëœë¤ ìœ„ì¹˜)
             Vector3 artworkCenter = artworkContainer != null ? artworkContainer.position : Vector3.zero;
             Vector3 randomOffset = UnityEngine.Random.insideUnitSphere * simulationRadius;
             return artworkCenter + randomOffset;
         }
 
-        // ½ÇÁ¦ VR È¯°æ¿¡¼­´Â VR ÄÁÆ®·Ñ·¯ À§Ä¡¸¦ ¹İÈ¯
-        // ¸¶¿ì½º ÀÔ·Â ¹é¾÷ (Input System È£È¯)
+        // ì‹¤ì œ VR í™˜ê²½ì—ì„œëŠ” VR ì»¨íŠ¸ë¡¤ëŸ¬ ìœ„ì¹˜ë¥¼ ë°˜í™˜
+        // ë§ˆìš°ìŠ¤ ì…ë ¥ ë°±ì—… (Input System í˜¸í™˜)
         Vector3 mousePos;
 
 #if ENABLE_INPUT_SYSTEM
-        // Input System »ç¿ë
+        // Input System ì‚¬ìš©
         if (Mouse.current != null)
         {
             Vector2 screenPos = Mouse.current.position.ReadValue();
@@ -339,13 +340,13 @@ public class VRCreationProtectionSystem : MonoBehaviour
         }
         else
         {
-            // ¸¶¿ì½º°¡ ¾øÀ¸¸é È­¸é Áß¾Ó
+            // ë§ˆìš°ìŠ¤ê°€ ì—†ìœ¼ë©´ í™”ë©´ ì¤‘ì•™
             mousePos = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 2f);
         }
 #else
-        // Legacy Input Manager »ç¿ë
+        // Legacy Input Manager ì‚¬ìš©
         mousePos = Input.mousePosition;
-        mousePos.z = 2f; // Ä«¸Ş¶ó·ÎºÎÅÍÀÇ °Å¸®
+        mousePos.z = 2f; // ì¹´ë©”ë¼ë¡œë¶€í„°ì˜ ê±°ë¦¬
 #endif
 
         if (Camera.main != null)
@@ -354,7 +355,7 @@ public class VRCreationProtectionSystem : MonoBehaviour
         }
         else
         {
-            // Ä«¸Ş¶ó°¡ ¾øÀ¸¸é ¿ùµå ÁÂÇ¥·Î °£´Ü º¯È¯
+            // ì¹´ë©”ë¼ê°€ ì—†ìœ¼ë©´ ì›”ë“œ ì¢Œí‘œë¡œ ê°„ë‹¨ ë³€í™˜
             return new Vector3(
                 (mousePos.x / Screen.width - 0.5f) * 10f,
                 (mousePos.y / Screen.height - 0.5f) * 10f,
@@ -365,16 +366,16 @@ public class VRCreationProtectionSystem : MonoBehaviour
 
     void OnBrushPositionChanged(Vector3 newPosition)
     {
-        // Ã¢ÀÛ ÇÖ½ºÆÌ ±â·Ï
+        // ì°½ì‘ í•«ìŠ¤íŒŸ ê¸°ë¡
         creationHotspots.Add(newPosition);
 
-        // ³Ê¹« ¸¹ÀÌ ½×ÀÌ¸é ¿À·¡µÈ °Í Á¦°Å
+        // ë„ˆë¬´ ë§ì´ ìŒ“ì´ë©´ ì˜¤ë˜ëœ ê²ƒ ì œê±°
         if (creationHotspots.Count > 100)
         {
             creationHotspots.RemoveAt(0);
         }
 
-        // ÁÖ¿ä Ã¢ÀÛ ¿µ¿ª ¾÷µ¥ÀÌÆ®
+        // ì£¼ìš” ì°½ì‘ ì˜ì—­ ì—…ë°ì´íŠ¸
         UpdatePrimaryCreationArea();
     }
 
@@ -392,8 +393,8 @@ public class VRCreationProtectionSystem : MonoBehaviour
 
     void TrackArtworkChanges()
     {
-        // ¾ÆÆ®¿öÅ© º¹Àâµµ ½Ç½Ã°£ °è»ê
-        if (Time.time - lastProtectionTime > 10f) // 10ÃÊ¸¶´Ù º¹Àâµµ Àç°è»ê
+        // ì•„íŠ¸ì›Œí¬ ë³µì¡ë„ ì‹¤ì‹œê°„ ê³„ì‚°
+        if (Time.time - lastProtectionTime > 10f) // 10ì´ˆë§ˆë‹¤ ë³µì¡ë„ ì¬ê³„ì‚°
         {
             currentCreationData.artworkComplexity = CalculateArtworkComplexity();
         }
@@ -405,21 +406,21 @@ public class VRCreationProtectionSystem : MonoBehaviour
 
         float complexity = 0f;
 
-        // ºê·¯½Ã ½ºÆ®·ÎÅ© ¼ö¿¡ µû¸¥ º¹Àâµµ
+        // ë¸ŒëŸ¬ì‹œ ìŠ¤íŠ¸ë¡œí¬ ìˆ˜ì— ë”°ë¥¸ ë³µì¡ë„
         complexity += Mathf.Clamp01(currentBrushStrokes / 100f) * 0.3f;
 
-        // Ã¢ÀÛ ÇÖ½ºÆÌ ºĞ»êµµ¿¡ µû¸¥ º¹Àâµµ
+        // ì°½ì‘ í•«ìŠ¤íŒŸ ë¶„ì‚°ë„ì— ë”°ë¥¸ ë³µì¡ë„
         if (creationHotspots.Count > 1)
         {
             float spread = CalculateHotspotSpread();
             complexity += Mathf.Clamp01(spread / 5f) * 0.3f;
         }
 
-        // »ç¿ëµÈ µµ±¸ ´Ù¾ç¼º¿¡ µû¸¥ º¹Àâµµ
+        // ì‚¬ìš©ëœ ë„êµ¬ ë‹¤ì–‘ì„±ì— ë”°ë¥¸ ë³µì¡ë„
         complexity += Mathf.Clamp01(currentCreationData.toolsUsed.Count / 5f) * 0.2f;
 
-        // Ã¢ÀÛ ½Ã°£¿¡ µû¸¥ º¹Àâµµ
-        complexity += Mathf.Clamp01(currentCreationData.creationDuration / 1800f) * 0.2f; // 30ºĞ ±âÁØ
+        // ì°½ì‘ ì‹œê°„ì— ë”°ë¥¸ ë³µì¡ë„
+        complexity += Mathf.Clamp01(currentCreationData.creationDuration / 1800f) * 0.2f; // 30ë¶„ ê¸°ì¤€
 
         return complexity;
     }
@@ -446,20 +447,20 @@ public class VRCreationProtectionSystem : MonoBehaviour
 
     void CheckProtectionTriggers()
     {
-        // ºê·¯½Ã º¯°æ ½Ã º¸È£
+        // ë¸ŒëŸ¬ì‹œ ë³€ê²½ ì‹œ ë³´í˜¸
         if (protectOnBrushChange && HasToolChanged())
         {
             StartCoroutine(ProtectCurrentArtwork("Tool_Change"));
         }
 
-        // Ã¢ÀÛ ¸¶ÀÏ½ºÅæ ´Ş¼º ½Ã º¸È£
+        // ì°½ì‘ ë§ˆì¼ìŠ¤í†¤ ë‹¬ì„± ì‹œ ë³´í˜¸
         if (protectOnCreationMilestone && HasReachedCreationMilestone())
         {
             StartCoroutine(ProtectCurrentArtwork("Creation_Milestone"));
             OnCreationMilestoneReached?.Invoke(currentCreationData);
         }
 
-        // ÀÚµ¿ ÁÖ±âÀû º¸È£
+        // ìë™ ì£¼ê¸°ì  ë³´í˜¸
         if (Time.time - lastProtectionTime >= autoProtectionInterval)
         {
             StartCoroutine(ProtectCurrentArtwork("Auto_Protection"));
@@ -468,17 +469,17 @@ public class VRCreationProtectionSystem : MonoBehaviour
 
     bool HasToolChanged()
     {
-        // ½ÇÁ¦ VR È¯°æ¿¡¼­´Â ÄÁÆ®·Ñ·¯ÀÇ µµ±¸ º¯°æÀ» °¨Áö
-        // Áö±İÀº ½Ã¹Ä·¹ÀÌ¼ÇÀ¸·Î Ã³¸®
-        return false; // º°µµ ÀÔ·ÂÀ¸·Î Ã³¸®
+        // ì‹¤ì œ VR í™˜ê²½ì—ì„œëŠ” ì»¨íŠ¸ë¡¤ëŸ¬ì˜ ë„êµ¬ ë³€ê²½ì„ ê°ì§€
+        // ì§€ê¸ˆì€ ì‹œë®¬ë ˆì´ì…˜ìœ¼ë¡œ ì²˜ë¦¬
+        return false; // ë³„ë„ ì…ë ¥ìœ¼ë¡œ ì²˜ë¦¬
     }
 
     bool HasReachedCreationMilestone()
     {
-        // Ã¢ÀÛ ¸¶ÀÏ½ºÅæ Á¶°Çµé
+        // ì°½ì‘ ë§ˆì¼ìŠ¤í†¤ ì¡°ê±´ë“¤
         bool strokeMilestone = (currentBrushStrokes > 0) && (currentBrushStrokes % 25 == 0);
         bool complexityMilestone = currentCreationData.artworkComplexity >= creationComplexityThreshold;
-        bool timeMilestone = currentCreationData.creationDuration >= 300f; // 5ºĞ
+        bool timeMilestone = currentCreationData.creationDuration >= 300f; // 5ë¶„
 
         return strokeMilestone || complexityMilestone || timeMilestone;
     }
@@ -491,25 +492,25 @@ public class VRCreationProtectionSystem : MonoBehaviour
     {
         float startTime = Time.realtimeSinceStartup;
 
-        Debug.Log($"¾ÆÆ®¿öÅ© º¸È£ ½ÃÀÛ - »çÀ¯: {triggerReason}, º¹Àâµµ: {currentCreationData.artworkComplexity:F3}");
+        Debug.Log($"ì•„íŠ¸ì›Œí¬ ë³´í˜¸ ì‹œì‘ - ì‚¬ìœ : {triggerReason}, ë³µì¡ë„: {currentCreationData.artworkComplexity:F3}");
 
-        // Ä«¸Ş¶ó À§Ä¡ ¾÷µ¥ÀÌÆ® (¾ÆÆ®¿öÅ© Áß½ÉÀ¸·Î)
+        // ì¹´ë©”ë¼ ìœ„ì¹˜ ì—…ë°ì´íŠ¸ (ì•„íŠ¸ì›Œí¬ ì¤‘ì‹¬ìœ¼ë¡œ)
         UpdateArtCameraPositions();
 
-        // 6¹æÇâ ¾ÆÆ® ºä ·»´õ¸µ
+        // 6ë°©í–¥ ì•„íŠ¸ ë·° ë Œë”ë§
         Dictionary<ArtViewDirection, ArtViewData> artViewResults = new Dictionary<ArtViewDirection, ArtViewData>();
 
         for (int i = 0; i < 6; i++)
         {
             ArtViewDirection direction = (ArtViewDirection)i;
             yield return StartCoroutine(RenderArtView(direction, artViewResults));
-            yield return null; // ÇÁ·¹ÀÓ ºĞ»ê
+            yield return null; // í”„ë ˆì„ ë¶„ì‚°
         }
 
-        // ÃÖÀû º¸È£ ºä ¼±ÅÃ
+        // ìµœì  ë³´í˜¸ ë·° ì„ íƒ
         var bestArtView = SelectBestArtView(artViewResults);
 
-        // º¸È£ °á°ú »ı¼º
+        // ë³´í˜¸ ê²°ê³¼ ìƒì„±
         ArtworkProtectionResult result = new ArtworkProtectionResult
         {
             primaryProtectionImage = bestArtView.image,
@@ -527,34 +528,34 @@ public class VRCreationProtectionSystem : MonoBehaviour
             result.viewQualityScores[kvp.Key] = kvp.Value.qualityScore;
         }
 
-        // ¹öÀü °ü¸®
+        // ë²„ì „ ê´€ë¦¬
         if (enableVersionControl)
         {
             currentCreationData.versionNumber++;
             SaveArtworkProtection(result, triggerReason);
         }
 
-        // »ç¿ëÇÏÁö ¾Ê´Â ÀÌ¹ÌÁö Á¤¸®
+        // ì‚¬ìš©í•˜ì§€ ì•ŠëŠ” ì´ë¯¸ì§€ ì •ë¦¬
         CleanupUnusedArtImages(artViewResults, bestArtView.direction);
 
         lastProtectionTime = Time.time;
 
-        // ÀÌº¥Æ® ¹ß»ı
+        // ì´ë²¤íŠ¸ ë°œìƒ
         OnArtworkProtected?.Invoke(result);
 
-        Debug.Log($"¾ÆÆ®¿öÅ© º¸È£ ¿Ï·á - ¹æÇâ: {result.primaryDirection}, " +
-                 $"Ç°ÁúÁ¡¼ö: {bestArtView.qualityScore:F3}, Ã³¸®½Ã°£: {result.protectionProcessingTime:F3}ÃÊ, " +
-                 $"¿öÅÍ¸¶Å· ÁØºñ: {(result.readyForWatermarking ? "¿Ï·á" : "´ë±â")}");
+        Debug.Log($"ì•„íŠ¸ì›Œí¬ ë³´í˜¸ ì™„ë£Œ - ë°©í–¥: {result.primaryDirection}, " +
+                 $"í’ˆì§ˆì ìˆ˜: {bestArtView.qualityScore:F3}, ì²˜ë¦¬ì‹œê°„: {result.protectionProcessingTime:F3}ì´ˆ, " +
+                 $"ì›Œí„°ë§ˆí‚¹ ì¤€ë¹„: {(result.readyForWatermarking ? "ì™„ë£Œ" : "ëŒ€ê¸°")}");
     }
 
     void UpdateArtCameraPositions()
     {
-        // artworkContainer°¡ ¾øÀ¸¸é Áß¾Ó À§Ä¡ ±âÁØÀ¸·Î ¼³Á¤
+        // artworkContainerê°€ ì—†ìœ¼ë©´ ì¤‘ì•™ ìœ„ì¹˜ ê¸°ì¤€ìœ¼ë¡œ ì„¤ì •
         if (artworkContainer == null)
         {
-            Debug.LogWarning("artworkContainer°¡ nullÀÔ´Ï´Ù. ±âº» À§Ä¡·Î Ä«¸Ş¶ó¸¦ ¼³Á¤ÇÕ´Ï´Ù.");
+            Debug.LogWarning("artworkContainerê°€ nullì…ë‹ˆë‹¤. ê¸°ë³¸ ìœ„ì¹˜ë¡œ ì¹´ë©”ë¼ë¥¼ ì„¤ì •í•©ë‹ˆë‹¤.");
 
-            // ±âº» À§Ä¡·Î Ä«¸Ş¶ó ¼³Á¤
+            // ê¸°ë³¸ ìœ„ì¹˜ë¡œ ì¹´ë©”ë¼ ì„¤ì •
             Vector3 centerCamera = Vector3.zero;
             float defaultDistance = 3f;
 
@@ -573,34 +574,34 @@ public class VRCreationProtectionSystem : MonoBehaviour
         Vector3 center = bounds.center;
         float optimalDistance = CalculateOptimalViewingDistance();
 
-        // ¾ÆÆ®¿öÅ© Áß½ÉÀ» ±âÁØÀ¸·Î °¢ Ä«¸Ş¶ó À§Ä¡ Á¶Á¤
+        // ì•„íŠ¸ì›Œí¬ ì¤‘ì‹¬ì„ ê¸°ì¤€ìœ¼ë¡œ ê° ì¹´ë©”ë¼ ìœ„ì¹˜ ì¡°ì •
         for (int i = 0; i < 6; i++)
         {
             Camera cam = artViewCameras[i];
             ArtViewDirection direction = (ArtViewDirection)i;
 
-            // À§Ä¡ ¼³Á¤
+            // ìœ„ì¹˜ ì„¤ì •
             Vector3 offset = optimalCameraPositions[i].normalized * optimalDistance;
             cam.transform.position = center + offset;
 
-            // È¸Àü ¼³Á¤ (¾ÆÆ®¿öÅ© Áß½ÉÀ» ¹Ù¶óº¸µµ·Ï)
+            // íšŒì „ ì„¤ì • (ì•„íŠ¸ì›Œí¬ ì¤‘ì‹¬ì„ ë°”ë¼ë³´ë„ë¡)
             cam.transform.LookAt(center);
 
-            // Æ¯º°ÇÑ °¢µµ Á¶Á¤
+            // íŠ¹ë³„í•œ ê°ë„ ì¡°ì •
             if (direction == ArtViewDirection.MainView)
             {
-                // ÁÖ¿ä °¨»ó °¢µµ´Â ¾à°£ À§¿¡¼­
+                // ì£¼ìš” ê°ìƒ ê°ë„ëŠ” ì•½ê°„ ìœ„ì—ì„œ
                 cam.transform.position += Vector3.up * (optimalDistance * 0.2f);
                 cam.transform.LookAt(center);
             }
             else if (direction == ArtViewDirection.DetailView)
             {
-                // µğÅ×ÀÏ ºä´Â ´õ °¡±îÀÌ
+                // ë””í…Œì¼ ë·°ëŠ” ë” ê°€ê¹Œì´
                 cam.transform.position = center + offset * 0.6f;
                 cam.fieldOfView = 45f;
             }
 
-            // ¾ÆÆ®¿öÅ© Å©±â¿¡ ¸Â´Â ½Ã¾ß°¢ Á¶Á¤
+            // ì•„íŠ¸ì›Œí¬ í¬ê¸°ì— ë§ëŠ” ì‹œì•¼ê° ì¡°ì •
             float distance = Vector3.Distance(cam.transform.position, center);
             cam.fieldOfView = Mathf.Clamp(bounds.size.magnitude / distance * 50f, 30f, 90f);
         }
@@ -620,17 +621,17 @@ public class VRCreationProtectionSystem : MonoBehaviour
         RenderTexture renderTexture = GetArtRenderTexture();
         cam.targetTexture = renderTexture;
 
-        // ¾ÆÆ®¿öÅ© Àü¿ë ·»´õ¸µ ¼³Á¤
+        // ì•„íŠ¸ì›Œí¬ ì „ìš© ë Œë”ë§ ì„¤ì •
         cam.enabled = true;
         cam.Render();
         cam.enabled = false;
 
         yield return new WaitForEndOfFrame();
 
-        // °íÇ°Áú ÅØ½ºÃ³ º¯È¯
+        // ê³ í’ˆì§ˆ í…ìŠ¤ì²˜ ë³€í™˜
         Texture2D artImage = RenderTextureToTexture2D(renderTexture);
 
-        // ¾ÆÆ®¿öÅ© Ç°Áú Á¡¼ö °è»ê
+        // ì•„íŠ¸ì›Œí¬ í’ˆì§ˆ ì ìˆ˜ ê³„ì‚°
         float qualityScore = CalculateArtQualityScore(artImage, direction);
 
         results[direction] = new ArtViewData
@@ -648,7 +649,7 @@ public class VRCreationProtectionSystem : MonoBehaviour
         Color[] pixels = image.GetPixels();
         float score = 0f;
 
-        // ¾ÆÆ®¿öÅ© ³»¿ë ºñÀ² °è»ê
+        // ì•„íŠ¸ì›Œí¬ ë‚´ìš© ë¹„ìœ¨ ê³„ì‚°
         int artworkPixels = 0;
         float totalSaturation = 0f;
         float totalContrast = 0f;
@@ -657,12 +658,12 @@ public class VRCreationProtectionSystem : MonoBehaviour
         {
             Color pixel = pixels[i];
 
-            // ¹è°æÀÌ ¾Æ´Ñ ¾ÆÆ®¿öÅ© ÇÈ¼¿ °¨Áö
+            // ë°°ê²½ì´ ì•„ë‹Œ ì•„íŠ¸ì›Œí¬ í”½ì…€ ê°ì§€
             if (pixel.a > 0.2f && !IsBackgroundColor(pixel))
             {
                 artworkPixels++;
 
-                // Ã¤µµ¿Í ´ëºñ °è»ê
+                // ì±„ë„ì™€ ëŒ€ë¹„ ê³„ì‚°
                 float saturation = Mathf.Max(pixel.r, pixel.g, pixel.b) - Mathf.Min(pixel.r, pixel.g, pixel.b);
                 totalSaturation += saturation;
 
@@ -671,11 +672,11 @@ public class VRCreationProtectionSystem : MonoBehaviour
             }
         }
 
-        // ¾ÆÆ®¿öÅ© ºñÀ² Á¡¼ö
+        // ì•„íŠ¸ì›Œí¬ ë¹„ìœ¨ ì ìˆ˜
         float artworkRatio = (float)artworkPixels / pixels.Length;
         score += artworkRatio * 0.4f;
 
-        // Æò±Õ Ã¤µµ Á¡¼ö
+        // í‰ê·  ì±„ë„ ì ìˆ˜
         if (artworkPixels > 0)
         {
             float avgSaturation = totalSaturation / artworkPixels;
@@ -685,7 +686,7 @@ public class VRCreationProtectionSystem : MonoBehaviour
             score += avgContrast * 0.3f;
         }
 
-        // ¹æÇâº° °¡ÁßÄ¡ (ÁÖ¿ä °¨»ó °¢µµ¿¡ ´õ ³ôÀº Á¡¼ö)
+        // ë°©í–¥ë³„ ê°€ì¤‘ì¹˜ (ì£¼ìš” ê°ìƒ ê°ë„ì— ë” ë†’ì€ ì ìˆ˜)
         float directionWeight = GetDirectionWeight(direction);
         score *= directionWeight;
 
@@ -694,7 +695,7 @@ public class VRCreationProtectionSystem : MonoBehaviour
 
     bool IsBackgroundColor(Color color)
     {
-        // ¹è°æ»ö ¹üÀ§ (¾îµÎ¿î È¸»ö°è¿­)
+        // ë°°ê²½ìƒ‰ ë²”ìœ„ (ì–´ë‘ìš´ íšŒìƒ‰ê³„ì—´)
         return color.r < 0.2f && color.g < 0.2f && color.b < 0.25f;
     }
 
@@ -702,12 +703,12 @@ public class VRCreationProtectionSystem : MonoBehaviour
     {
         switch (direction)
         {
-            case ArtViewDirection.MainView: return 1.2f;      // ÁÖ¿ä °¨»ó °¢µµ
-            case ArtViewDirection.DetailView: return 1.1f;   // µğÅ×ÀÏ ºä
-            case ArtViewDirection.ProfileLeft: return 1.0f;  // ÇÁ·ÎÇÊ
-            case ArtViewDirection.ProfileRight: return 1.0f; // ÇÁ·ÎÇÊ
-            case ArtViewDirection.TopView: return 0.8f;      // »ó´Ü ºä
-            case ArtViewDirection.BottomView: return 0.7f;   // ÇÏ´Ü ºä
+            case ArtViewDirection.MainView: return 1.2f;      // ì£¼ìš” ê°ìƒ ê°ë„
+            case ArtViewDirection.DetailView: return 1.1f;   // ë””í…Œì¼ ë·°
+            case ArtViewDirection.ProfileLeft: return 1.0f;  // í”„ë¡œí•„
+            case ArtViewDirection.ProfileRight: return 1.0f; // í”„ë¡œí•„
+            case ArtViewDirection.TopView: return 0.8f;      // ìƒë‹¨ ë·°
+            case ArtViewDirection.BottomView: return 0.7f;   // í•˜ë‹¨ ë·°
             default: return 1.0f;
         }
     }
@@ -740,19 +741,19 @@ public class VRCreationProtectionSystem : MonoBehaviour
 
         EnsureDirectoryExists(sessionFolder);
 
-        // ÁÖ¿ä º¸È£ ÀÌ¹ÌÁö ÀúÀå
+        // ì£¼ìš” ë³´í˜¸ ì´ë¯¸ì§€ ì €ì¥
         string primaryFileName = $"{currentCreationData.projectName}_v{currentCreationData.versionNumber:D3}_{triggerReason}_{result.primaryDirection}_{timestamp}.png";
         string primaryPath = sessionFolder + primaryFileName;
         SaveTextureToPNG(result.primaryProtectionImage, primaryPath);
 
-        // ¸ŞÅ¸µ¥ÀÌÅÍ ÀúÀå
+        // ë©”íƒ€ë°ì´í„° ì €ì¥
         string metadataFileName = $"{currentCreationData.projectName}_v{currentCreationData.versionNumber:D3}_metadata_{timestamp}.json";
         string metadataPath = sessionFolder + metadataFileName;
         SaveCreationMetadata(result.metadata, metadataPath);
 
         protectedArtworks.Add(primaryPath);
 
-        Debug.Log($"¾ÆÆ®¿öÅ© º¸È£ ÆÄÀÏ ÀúÀå: {primaryPath}");
+        Debug.Log($"ì•„íŠ¸ì›Œí¬ ë³´í˜¸ íŒŒì¼ ì €ì¥: {primaryPath}");
     }
 
     void SaveCreationMetadata(CreationMetadata metadata, string filePath)
@@ -764,7 +765,7 @@ public class VRCreationProtectionSystem : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            Debug.LogError($"¸ŞÅ¸µ¥ÀÌÅÍ ÀúÀå ½ÇÆĞ: {e.Message}");
+            Debug.LogError($"ë©”íƒ€ë°ì´í„° ì €ì¥ ì‹¤íŒ¨: {e.Message}");
         }
     }
 
@@ -790,33 +791,33 @@ public class VRCreationProtectionSystem : MonoBehaviour
 
     void CreateSampleArtwork()
     {
-        // »ùÇÃ ¾ÆÆ®¿öÅ© »ı¼º (Å×½ºÆ®¿ë)
+        // ìƒ˜í”Œ ì•„íŠ¸ì›Œí¬ ìƒì„± (í…ŒìŠ¤íŠ¸ìš©)
         GameObject artwork = GameObject.CreatePrimitive(PrimitiveType.Cube);
         artwork.name = "Sample_VR_Artwork";
         artwork.transform.position = Vector3.zero;
         artwork.transform.localScale = Vector3.one * 1.5f;
 
-        // ¾ÆÆ®¿öÅ©´ä°Ô »ö»ó Ãß°¡
+        // ì•„íŠ¸ì›Œí¬ë‹µê²Œ ìƒ‰ìƒ ì¶”ê°€
         Renderer renderer = artwork.GetComponent<Renderer>();
-        Material artMaterial = new Material(Shader.Find("Standard"));
+        Material artMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
         artMaterial.color = Color.HSVToRGB(UnityEngine.Random.Range(0f, 1f), 0.8f, 0.9f);
 
-        // Standard ¼ÎÀÌ´õ ÇÁ·ÎÆÛÆ¼·Î ¼³Á¤
+        // Standard ì…°ì´ë” í”„ë¡œí¼í‹°ë¡œ ì„¤ì •
         artMaterial.SetFloat("_Metallic", 0.3f);
         artMaterial.SetFloat("_Glossiness", 0.7f);
 
         renderer.material = artMaterial;
 
         artworkContainer = artwork.transform;
-        Debug.Log("»ùÇÃ VR ¾ÆÆ®¿öÅ© »ı¼º ¿Ï·á");
+        Debug.Log("ìƒ˜í”Œ VR ì•„íŠ¸ì›Œí¬ ìƒì„± ì™„ë£Œ");
     }
 
     Bounds GetArtworkBounds()
     {
-        // artworkContainer°¡ ¾øÀ¸¸é ±âº» Bounds ¹İÈ¯
+        // artworkContainerê°€ ì—†ìœ¼ë©´ ê¸°ë³¸ Bounds ë°˜í™˜
         if (artworkContainer == null)
         {
-            Debug.LogWarning("artworkContainer°¡ nullÀÔ´Ï´Ù. ±âº» Bounds¸¦ ¹İÈ¯ÇÕ´Ï´Ù.");
+            Debug.LogWarning("artworkContainerê°€ nullì…ë‹ˆë‹¤. ê¸°ë³¸ Boundsë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.");
             return new Bounds(Vector3.zero, Vector3.one);
         }
 
@@ -929,7 +930,7 @@ public class VRCreationProtectionSystem : MonoBehaviour
             }
 
             OnToolChanged?.Invoke(newTool);
-            Debug.Log($"µµ±¸ º¯°æ: {newTool}");
+            Debug.Log($"ë„êµ¬ ë³€ê²½: {newTool}");
 
             if (protectOnBrushChange)
             {
@@ -943,11 +944,11 @@ public class VRCreationProtectionSystem : MonoBehaviour
         currentBrushStrokes++;
         currentCreationData.totalBrushStrokes = currentBrushStrokes;
 
-        // ·£´ı À§Ä¡¿¡ ºê·¯½Ã ½ºÆ®·ÎÅ© Ãß°¡
+        // ëœë¤ ìœ„ì¹˜ì— ë¸ŒëŸ¬ì‹œ ìŠ¤íŠ¸ë¡œí¬ ì¶”ê°€
         Vector3 randomPos = UnityEngine.Random.insideUnitSphere * 2f;
         OnBrushPositionChanged(randomPos);
 
-        Debug.Log($"ºê·¯½Ã ½ºÆ®·ÎÅ© #{currentBrushStrokes} - º¹Àâµµ: {currentCreationData.artworkComplexity:F3}");
+        Debug.Log($"ë¸ŒëŸ¬ì‹œ ìŠ¤íŠ¸ë¡œí¬ #{currentBrushStrokes} - ë³µì¡ë„: {currentCreationData.artworkComplexity:F3}");
     }
 
     #endregion
@@ -972,56 +973,56 @@ public class VRCreationProtectionSystem : MonoBehaviour
     {
         GUILayout.BeginArea(new Rect(10, 10, 400, 500));
 
-        GUILayout.Label("=== VR ¾ÆÆ® Ã¢ÀÛ º¸È£ ½Ã½ºÅÛ ===", GUI.skin.box);
+        GUILayout.Label("=== VR ì•„íŠ¸ ì°½ì‘ ë³´í˜¸ ì‹œìŠ¤í…œ ===", GUI.skin.box);
 
-        // ¾ÆÆ¼½ºÆ® Á¤º¸
-        GUILayout.Label($"¾ÆÆ¼½ºÆ®: {artistName} (ID: {artistID})");
-        GUILayout.Label($"ÇÁ·ÎÁ§Æ®: {projectName}");
-        GUILayout.Label($"¼¼¼Ç ID: {currentCreationData.sessionID}");
-
-        GUILayout.Space(10);
-
-        // Ã¢ÀÛ ÇöÈ²
-        GUILayout.Label("=== Ã¢ÀÛ ÇöÈ² ===", GUI.skin.box);
-        GUILayout.Label($"Ã¢ÀÛ ½Ã°£: {currentCreationData.creationDuration:F1}ÃÊ");
-        GUILayout.Label($"ºê·¯½Ã ½ºÆ®·ÎÅ©: {currentBrushStrokes}È¸");
-        GUILayout.Label($"»ç¿ë µµ±¸: {currentCreationData.toolsUsed.Count}°³");
-        GUILayout.Label($"ÇöÀç µµ±¸: {currentTool}");
-        GUILayout.Label($"¾ÆÆ®¿öÅ© º¹Àâµµ: {currentCreationData.artworkComplexity:F3}");
-        GUILayout.Label($"¹öÀü: v{currentCreationData.versionNumber}");
+        // ì•„í‹°ìŠ¤íŠ¸ ì •ë³´
+        GUILayout.Label($"ì•„í‹°ìŠ¤íŠ¸: {artistName} (ID: {artistID})");
+        GUILayout.Label($"í”„ë¡œì íŠ¸: {projectName}");
+        GUILayout.Label($"ì„¸ì…˜ ID: {currentCreationData.sessionID}");
 
         GUILayout.Space(10);
 
-        // º¸È£ ½Ã½ºÅÛ »óÅÂ
-        GUILayout.Label("=== º¸È£ ½Ã½ºÅÛ ===", GUI.skin.box);
-        GUILayout.Label($"VR ½Ã¹Ä·¹ÀÌ¼Ç: {(useVRSimulation ? "È°¼º" : "ºñÈ°¼º")}");
-        GUILayout.Label($"ÇØ»óµµ: {artworkResolution}x{artworkResolution}");
-        GUILayout.Label($"Æò±Õ FPS: {(fpsHistory.Count > 0 ? fpsHistory[fpsHistory.Count - 1] : 0):F1}");
-        GUILayout.Label($"º¸È£µÈ ÀÛÇ°: {protectedArtworks.Count}°³");
-        GUILayout.Label($"´ÙÀ½ ÀÚµ¿ º¸È£: {(autoProtectionInterval - (Time.time - lastProtectionTime)):F0}ÃÊ ÈÄ");
+        // ì°½ì‘ í˜„í™©
+        GUILayout.Label("=== ì°½ì‘ í˜„í™© ===", GUI.skin.box);
+        GUILayout.Label($"ì°½ì‘ ì‹œê°„: {currentCreationData.creationDuration:F1}ì´ˆ");
+        GUILayout.Label($"ë¸ŒëŸ¬ì‹œ ìŠ¤íŠ¸ë¡œí¬: {currentBrushStrokes}íšŒ");
+        GUILayout.Label($"ì‚¬ìš© ë„êµ¬: {currentCreationData.toolsUsed.Count}ê°œ");
+        GUILayout.Label($"í˜„ì¬ ë„êµ¬: {currentTool}");
+        GUILayout.Label($"ì•„íŠ¸ì›Œí¬ ë³µì¡ë„: {currentCreationData.artworkComplexity:F3}");
+        GUILayout.Label($"ë²„ì „: v{currentCreationData.versionNumber}");
 
         GUILayout.Space(10);
 
-        // Á¶ÀÛ ¹öÆ°µé
-        GUILayout.Label("=== Á¶ÀÛ ===", GUI.skin.box);
+        // ë³´í˜¸ ì‹œìŠ¤í…œ ìƒíƒœ
+        GUILayout.Label("=== ë³´í˜¸ ì‹œìŠ¤í…œ ===", GUI.skin.box);
+        GUILayout.Label($"VR ì‹œë®¬ë ˆì´ì…˜: {(useVRSimulation ? "í™œì„±" : "ë¹„í™œì„±")}");
+        GUILayout.Label($"í•´ìƒë„: {artworkResolution}x{artworkResolution}");
+        GUILayout.Label($"í‰ê·  FPS: {(fpsHistory.Count > 0 ? fpsHistory[fpsHistory.Count - 1] : 0):F1}");
+        GUILayout.Label($"ë³´í˜¸ëœ ì‘í’ˆ: {protectedArtworks.Count}ê°œ");
+        GUILayout.Label($"ë‹¤ìŒ ìë™ ë³´í˜¸: {(autoProtectionInterval - (Time.time - lastProtectionTime)):F0}ì´ˆ í›„");
 
-        if (GUILayout.Button("¾ÆÆ®¿öÅ© º¸È£ ½ÇÇà (Space)"))
+        GUILayout.Space(10);
+
+        // ì¡°ì‘ ë²„íŠ¼ë“¤
+        GUILayout.Label("=== ì¡°ì‘ ===", GUI.skin.box);
+
+        if (GUILayout.Button("ì•„íŠ¸ì›Œí¬ ë³´í˜¸ ì‹¤í–‰ (Space)"))
         {
             StartCoroutine(ProtectCurrentArtwork("Manual_GUI"));
         }
 
-        if (GUILayout.Button("µµ±¸ º¯°æ ½Ã¹Ä·¹ÀÌ¼Ç (T)"))
+        if (GUILayout.Button("ë„êµ¬ ë³€ê²½ ì‹œë®¬ë ˆì´ì…˜ (T)"))
         {
             SimulateToolChange();
         }
 
-        if (GUILayout.Button("ºê·¯½Ã ½ºÆ®·ÎÅ© Ãß°¡ (B)"))
+        if (GUILayout.Button("ë¸ŒëŸ¬ì‹œ ìŠ¤íŠ¸ë¡œí¬ ì¶”ê°€ (B)"))
         {
             SimulateBrushStroke();
         }
 
         GUILayout.Space(5);
-        GUILayout.Label("Space: º¸È£ ½ÇÇà, T: µµ±¸º¯°æ, B: ºê·¯½Ã½ºÆ®·ÎÅ©");
+        GUILayout.Label("Space: ë³´í˜¸ ì‹¤í–‰, T: ë„êµ¬ë³€ê²½, B: ë¸ŒëŸ¬ì‹œìŠ¤íŠ¸ë¡œí¬");
 
         GUILayout.EndArea();
     }
@@ -1030,7 +1031,7 @@ public class VRCreationProtectionSystem : MonoBehaviour
 
     void OnDestroy()
     {
-        // ·»´õÅØ½ºÃ³ Á¤¸®
+        // ë Œë”í…ìŠ¤ì²˜ ì •ë¦¬
         while (artRenderTexturePool.Count > 0)
         {
             RenderTexture rt = artRenderTexturePool.Dequeue();
@@ -1042,6 +1043,6 @@ public class VRCreationProtectionSystem : MonoBehaviour
             if (rt != null) rt.Release();
         }
 
-        Debug.Log($"VR ¾ÆÆ® Ã¢ÀÛ ¼¼¼Ç Á¾·á - ÃÑ º¸È£µÈ ÀÛÇ°: {protectedArtworks.Count}°³");
+        Debug.Log($"VR ì•„íŠ¸ ì°½ì‘ ì„¸ì…˜ ì¢…ë£Œ - ì´ ë³´í˜¸ëœ ì‘í’ˆ: {protectedArtworks.Count}ê°œ");
     }
 }

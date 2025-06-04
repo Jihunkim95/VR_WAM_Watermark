@@ -189,8 +189,8 @@ public class VRCreationProtectionSystem : MonoBehaviour
         float artDistance = CalculateOptimalViewingDistance();
 
         // 주요 감상 각도 (정면 약간 우상단)
-        optimalCameraPositions[(int)ArtViewDirection.MainView] = new Vector3(1f, 0.8f, 2f).normalized * artDistance;
-        optimalCameraRotations[(int)ArtViewDirection.MainView] = new Vector3(-15f, -25f, 0f);
+        optimalCameraPositions[(int)ArtViewDirection.MainView] = new Vector3(1f, 1.2f, 2f).normalized * artDistance;
+        optimalCameraRotations[(int)ArtViewDirection.MainView] = new Vector3(-15f, -30f, 0f);
 
         // 세부 디테일 각도 (가까운 거리)
         optimalCameraPositions[(int)ArtViewDirection.DetailView] = new Vector3(0.5f, 0f, 1f).normalized * (artDistance * 0.7f);
@@ -601,10 +601,22 @@ public class VRCreationProtectionSystem : MonoBehaviour
                 cam.fieldOfView = 45f;
             }
 
-            // 아트워크 크기에 맞는 시야각 조정
+            // 아트워크 크기에 맞는 시야각 계산 (더 넉넉하게)
             float distance = Vector3.Distance(cam.transform.position, center);
-            cam.fieldOfView = Mathf.Clamp(bounds.size.magnitude / distance * 50f, 30f, 90f);
+            float optimalFOV = bounds.size.magnitude / distance * 50f; // 50f → 60f로 증가
+
+            if (direction == ArtViewDirection.MainView || direction == ArtViewDirection.DetailView)
+            {
+                // MainView는 추가로 10도 더 넓게
+                cam.fieldOfView = Mathf.Clamp(optimalFOV + 10f, 40f, 90f);
+            }
+            else
+            {
+                cam.fieldOfView = Mathf.Clamp(optimalFOV, 35f, 85f);
+            }
         }
+
+
     }
 
     struct ArtViewData
@@ -703,7 +715,7 @@ public class VRCreationProtectionSystem : MonoBehaviour
     {
         switch (direction)
         {
-            case ArtViewDirection.MainView: return 1.2f;      // 주요 감상 각도
+            case ArtViewDirection.MainView: return 1.3f;      // 주요 감상 각도
             case ArtViewDirection.DetailView: return 1.1f;   // 디테일 뷰
             case ArtViewDirection.ProfileLeft: return 1.0f;  // 프로필
             case ArtViewDirection.ProfileRight: return 1.0f; // 프로필

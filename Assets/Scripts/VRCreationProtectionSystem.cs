@@ -23,7 +23,6 @@ public class VRCreationProtectionSystem : MonoBehaviour
     [Header("Creation Tracking")]
     [SerializeField] private bool enableCreationTracking = true;
     [SerializeField] private float brushChangeDetectionRadius = 0.1f;
-    [SerializeField] private int minimumCreationActions = 5; // 최소 창작 행동 수
 
     [Header("VR Art Protection Settings")]
     [SerializeField] private int artworkResolution = 1024; // 아트워크는 고해상도
@@ -34,7 +33,6 @@ public class VRCreationProtectionSystem : MonoBehaviour
     [SerializeField] private bool protectOnBrushChange = true;
     [SerializeField] private bool protectOnCreationMilestone = true;
     [SerializeField] private float autoProtectionInterval = 180f; // 3분마다
-    [SerializeField] private bool protectOnSessionEnd = true;
 
     [Header("VR Simulation")]
     [SerializeField] private bool useVRSimulation = true;
@@ -603,8 +601,7 @@ public class VRCreationProtectionSystem : MonoBehaviour
 
             // 아트워크 크기에 맞는 시야각 계산 (더 넉넉하게)
             float distance = Vector3.Distance(cam.transform.position, center);
-            float optimalFOV = bounds.size.magnitude / distance * 50f; // 50f → 60f로 증가
-
+            float optimalFOV = bounds.size.magnitude / distance * 50f;
             if (direction == ArtViewDirection.MainView || direction == ArtViewDirection.DetailView)
             {
                 // MainView는 추가로 10도 더 넓게

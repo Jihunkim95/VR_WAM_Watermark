@@ -1,10 +1,13 @@
-﻿using System.Collections;
+﻿using UnityEngine.Networking;
+using Newtonsoft.Json; 
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using System;
 using System.Linq;
-
+using System.Text;
+using UnityEngine.XR;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -26,7 +29,7 @@ public class VRCreationProtectionSystem : MonoBehaviour
 
     [Header("VR Art Protection Settings")]
     [SerializeField] private int artworkResolution = 1024; // 아트워크는 고해상도
-    [SerializeField] private float creationComplexityThreshold = 0.3f;
+    [SerializeField] private float creationComplexityThreshold = 0.1f;
     [SerializeField] private bool enableVersionControl = true;
 
     [Header("Auto Protection Triggers")]
@@ -37,6 +40,37 @@ public class VRCreationProtectionSystem : MonoBehaviour
     [Header("VR Simulation")]
     [SerializeField] private bool useVRSimulation = true;
     [SerializeField] private float simulationRadius = 2f;
+
+    [Header("Watermark Server Settings")]
+    [SerializeField] private string wamServerUrl = "http://localhost:5000";
+    [SerializeField] private bool useWAMWatermark = true;
+    private Queue<WatermarkRequest> watermarkQueue = new Queue<WatermarkRequest>();
+    private bool isProcessingWatermark = false;
+
+    // 스크린샷 쿨타임
+    private bool isProtectionInProgress = false;
+    private float lastProtectionRequestTime = 0f;
+    private float protectionCooldown = 2f; // 2초 쿨다운
+    // WAM 요청/응답 클래스 추가
+    private class WatermarkRequest
+    {
+        public byte[] imageData;
+        public string artworkId;
+        public CreationMetadata metadata;
+        public ArtViewDirection viewDirection;
+        public Action<WatermarkResponse> callback;
+    }
+
+    [Serializable]
+    public class WatermarkResponse
+    {
+        public bool success;
+        public string watermarked_image;
+        public string filename;
+        public string filepath;
+        public string message;
+        public float bit_accuracy;
+    }
 
     // VR 창작 데이터
     [System.Serializable]
@@ -127,8 +161,34 @@ public class VRCreationProtectionSystem : MonoBehaviour
         SetupRenderTexturePool();
 
         Debug.Log($"VR 아트 창작 보호 시스템 시작 - 아티스트: {artistName}");
-    }
 
+        // WAM 서버 상태 확인 추가
+        if (useWAMWatermark)
+        {
+            StartCoroutine(CheckWAMServerHealth());
+        }
+
+        // 비동기 워터마크 처리 시작
+        StartCoroutine(ProcessWatermarkQueue());
+    }
+    private IEnumerator CheckWAMServerHealth()
+    {
+        using (UnityWebRequest request = UnityWebRequest.Get($"{wamServerUrl}/health"))
+        {
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                Debug.Log($"WAM Server is healthy: {request.downloadHandler.text}");
+                useWAMWatermark = true;
+            }
+            else
+            {
+                Debug.LogError($"WAM Server health check failed: {request.error}");
+                useWAMWatermark = false;
+            }
+        }
+    }
     void Update()
     {
         MonitorCreationActivity();
@@ -136,15 +196,23 @@ public class VRCreationProtectionSystem : MonoBehaviour
         CheckProtectionTriggers();
         MonitorPerformance();
 
-        // 수동 보호 실행 (VR 컨트롤러 또는 키보드)
-        if (IsProtectionTriggerPressed())
+        // 수동 보호 실행 (쿨다운 추가)
+        if (IsProtectionTriggerPressed() && !isProtectionInProgress &&
+            Time.time - lastProtectionRequestTime > protectionCooldown)
         {
-            StartCoroutine(ProtectCurrentArtwork("Manual_Protection"));
+            isProtectionInProgress = true;
+            lastProtectionRequestTime = Time.time;
+            StartCoroutine(ProtectCurrentArtworkWithFlag("Manual_Protection"));
         }
 
         // 도구 변경 테스트 (개발용)
         if (IsToolChangePressed()) SimulateToolChange();
         if (IsBrushStrokePressed()) SimulateBrushStroke();
+    }
+    private IEnumerator ProtectCurrentArtworkWithFlag(string triggerReason)
+    {
+        yield return StartCoroutine(ProtectCurrentArtwork(triggerReason));
+        isProtectionInProgress = false;
     }
 
     #region VR Art System Initialization
@@ -750,21 +818,127 @@ public class VRCreationProtectionSystem : MonoBehaviour
 
         EnsureDirectoryExists(sessionFolder);
 
-        // 주요 보호 이미지 저장
-        string primaryFileName = $"{currentCreationData.projectName}_v{currentCreationData.versionNumber:D3}_{triggerReason}_{result.primaryDirection}_{timestamp}.png";
-        string primaryPath = sessionFolder + primaryFileName;
-        SaveTextureToPNG(result.primaryProtectionImage, primaryPath);
+        // WAM 워터마킹이 활성화되어 있고, 복잡도가 충분한 경우
+        if (useWAMWatermark && result.readyForWatermarking)
+        {
+            // WAM 워터마크 요청 추가
+            byte[] imageData = result.primaryProtectionImage.EncodeToPNG();
+            var request = new WatermarkRequest
+            {
+                imageData = imageData,
+                artworkId = $"{currentCreationData.projectName}_v{currentCreationData.versionNumber:D3}",
+                metadata = currentCreationData,
+                viewDirection = result.primaryDirection,
+                callback = (response) => OnWAMWatermarkComplete(response, result, triggerReason)
+            };
 
-        // 메타데이터 저장
-        string metadataFileName = $"{currentCreationData.projectName}_v{currentCreationData.versionNumber:D3}_metadata_{timestamp}.json";
-        string metadataPath = sessionFolder + metadataFileName;
-        SaveCreationMetadata(result.metadata, metadataPath);
+            watermarkQueue.Enqueue(request);
+            Debug.Log("WAM 워터마크 요청 큐에 추가됨");
+        }
+        else
+        {
+            // 기존 로컬 저장 로직
+            string primaryFileName = $"{currentCreationData.projectName}_v{currentCreationData.versionNumber:D3}_{triggerReason}_{result.primaryDirection}_{timestamp}.png";
+            string primaryPath = sessionFolder + primaryFileName;
+            SaveTextureToPNG(result.primaryProtectionImage, primaryPath);
 
-        protectedArtworks.Add(primaryPath);
+            // 메타데이터 저장
+            string metadataFileName = $"{currentCreationData.projectName}_v{currentCreationData.versionNumber:D3}_metadata_{timestamp}.json";
+            string metadataPath = sessionFolder + metadataFileName;
+            SaveCreationMetadata(result.metadata, metadataPath);
 
-        Debug.Log($"아트워크 보호 파일 저장: {primaryPath}");
+            protectedArtworks.Add(primaryPath);
+            Debug.Log($"아트워크 보호 파일 저장 (워터마크 없음): {primaryPath}");
+        }
+    }
+    private IEnumerator ProcessWatermarkQueue()
+    {
+        while (true)
+        {
+            if (watermarkQueue.Count > 0 && !isProcessingWatermark)
+            {
+                var request = watermarkQueue.Dequeue();
+                yield return ProcessWatermarkRequest(request);
+            }
+            yield return new WaitForSeconds(0.1f);
+        }
     }
 
+    private IEnumerator ProcessWatermarkRequest(WatermarkRequest request)
+    {
+        isProcessingWatermark = true;
+
+        // JSON 데이터 준비
+        var requestData = new
+        {
+            image = Convert.ToBase64String(request.imageData),
+            creatorId = request.metadata.artistID,
+            timestamp = request.metadata.lastModificationTime.ToString("o"),
+            artworkId = request.artworkId,
+            complexity = request.metadata.artworkComplexity,
+            viewDirection = request.viewDirection.ToString()
+        };
+
+        string jsonData = JsonConvert.SerializeObject(requestData);
+        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonData);
+
+        using (UnityWebRequest www = new UnityWebRequest($"{wamServerUrl}/watermark", "POST"))
+        {
+            www.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            www.downloadHandler = new DownloadHandlerBuffer();
+            www.SetRequestHeader("Content-Type", "application/json");
+
+            yield return www.SendWebRequest();
+
+            if (www.result == UnityWebRequest.Result.Success)
+            {
+                var response = JsonConvert.DeserializeObject<WatermarkResponse>(www.downloadHandler.text);
+                request.callback?.Invoke(response);
+            }
+            else
+            {
+                Debug.LogError($"WAM 워터마크 요청 실패: {www.error}");
+                // 실패 시 원본 저장
+                SaveTextureToPNG(Texture2D.CreateExternalTexture(
+                    request.metadata.artworkComplexity > 0 ? 1024 : 512,
+                    request.metadata.artworkComplexity > 0 ? 1024 : 512,
+                    TextureFormat.RGBA32,
+                    false,
+                    false,
+                    System.IntPtr.Zero),
+                    $"Assets/ProtectedArtworks/{request.artworkId}_failed.png"
+                );
+            }
+        }
+
+        isProcessingWatermark = false;
+    }
+
+    private void OnWAMWatermarkComplete(WatermarkResponse response, ArtworkProtectionResult originalResult, string triggerReason)
+    {
+        if (response.success)
+        {
+            Debug.Log($"WAM 워터마크 적용 성공!");
+            Debug.Log($"- 파일: {response.filename}");
+            Debug.Log($"- 메시지: {response.message}");
+            Debug.Log($"- 정확도: {response.bit_accuracy:P0}");
+            Debug.Log($"- 저장 경로: {response.filepath}");
+
+            protectedArtworks.Add(response.filepath);
+
+            // UI 업데이트나 이벤트 발생
+            if (OnArtworkProtected != null)
+            {
+                // 워터마크 정보를 originalResult에 추가
+                originalResult.readyForWatermarking = true;
+                OnArtworkProtected.Invoke(originalResult);
+            }
+        }
+        else
+        {
+            Debug.LogError("WAM 워터마크 적용 실패");
+        }
+    }
     void SaveCreationMetadata(CreationMetadata metadata, string filePath)
     {
         try
@@ -1010,6 +1184,11 @@ public class VRCreationProtectionSystem : MonoBehaviour
         GUILayout.Label($"보호된 작품: {protectedArtworks.Count}개");
         GUILayout.Label($"다음 자동 보호: {(autoProtectionInterval - (Time.time - lastProtectionTime)):F0}초 후");
 
+        GUILayout.Space(10);
+
+        GUILayout.Label($"WAM 워터마크: {(useWAMWatermark ? "활성" : "비활성")}");
+        GUILayout.Label($"워터마크 큐: {watermarkQueue.Count}개 대기");
+        GUILayout.Label($"워터마크 처리중: {(isProcessingWatermark ? "예" : "아니오")}");
         GUILayout.Space(10);
 
         // 조작 버튼들

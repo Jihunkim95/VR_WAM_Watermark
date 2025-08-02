@@ -661,16 +661,16 @@ MonoBehaviour:
     m_Bits: 4294967295
   enableCreationTracking: 1
   brushChangeDetectionRadius: 0.1
-  minimumCreationActions: 5
   artworkResolution: 1024
-  creationComplexityThreshold: 0.3
+  creationComplexityThreshold: 0.1
   enableVersionControl: 1
   protectOnBrushChange: 1
   protectOnCreationMilestone: 1
   autoProtectionInterval: 180
-  protectOnSessionEnd: 1
   useVRSimulation: 1
   simulationRadius: 2
+  wamServerUrl: http://localhost:5000
+  useWAMWatermark: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

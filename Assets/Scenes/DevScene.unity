@@ -333,6 +333,62 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1709773929
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1709773931}
+  - component: {fileID: 1709773930}
+  m_Layer: 0
+  m_Name: VRWatermarkManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1709773930
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1709773929}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5cf959e5902c5214b887dd2197215e1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  realtimeSystem: {fileID: 0}
+  postProcessSystem: {fileID: 0}
+  autoSwitchToPostProcess: 1
+  sessionTimeoutMinutes: 30
+  processingUIPanel: {fileID: 0}
+  statusText: {fileID: 0}
+  progressBar: {fileID: 0}
+  progressText: {fileID: 0}
+  completionEffectPrefab: {fileID: 0}
+  vrUIContainer: {fileID: 0}
+  uiDistance: 2
+  followHeadset: 1
+--- !u!4 &1709773931
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1709773929}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.1898687, y: 0.16491997, z: 0.52220076}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1738258145
 GameObject:
   m_ObjectHideFlags: 0
@@ -462,7 +518,7 @@ GameObject:
   - component: {fileID: 1960784084}
   - component: {fileID: 1960784083}
   m_Layer: 0
-  m_Name: VRCreationProtectionUI
+  m_Name: VRWatermark_UI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -514,7 +570,8 @@ GameObject:
   - component: {fileID: 2031479326}
   - component: {fileID: 2031479325}
   - component: {fileID: 2031479328}
-  - component: {fileID: 2031479329}
+  - component: {fileID: 2031479331}
+  - component: {fileID: 2031479330}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -590,7 +647,7 @@ Transform:
   m_GameObject: {fileID: 2031479324}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.102376476, z: -0, w: 0.99474573}
-  m_LocalPosition: {x: -3.31, y: 1, z: -10.28}
+  m_LocalPosition: {x: -0.44, y: -0.44, z: -2.65}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -640,7 +697,7 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
---- !u!114 &2031479329
+--- !u!114 &2031479330
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -649,7 +706,41 @@ MonoBehaviour:
   m_GameObject: {fileID: 2031479324}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 81e10c5171bee744ca8e8635b0527676, type: 3}
+  m_Script: {fileID: 11500000, guid: 3f4378e4778483e44b2391dfc40f650c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  wamServerUrl: http://localhost:5000
+  serverTimeout: 45
+  useBatchAPI: 0
+  vrProtectionSystem: {fileID: 0}
+  useExistingArtCameras: 1
+  captureResolution: 1024
+  artworkLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  artworkContainer: {fileID: 442728563}
+  albedoStrength: 2
+  depthStrength: 1.5
+  normalStrength: 1.2
+  shadowStrength: 0.8
+  roughnessStrength: 1
+  albedoMaskRatio: 1
+  depthMaskRatio: 0.8
+  normalMaskRatio: 0.7
+  shadowMaskRatio: 0.6
+  roughnessMaskRatio: 0.75
+  enableBatchProcessing: 1
+  gpuParallelCount: 4
+--- !u!114 &2031479331
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2031479324}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e20b6ce26fd2314d9acb5881e5aaa33, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   artistID: Artist_001
@@ -680,3 +771,4 @@ SceneRoots:
   - {fileID: 442728567}
   - {fileID: 878271416}
   - {fileID: 1960784084}
+  - {fileID: 1709773931}

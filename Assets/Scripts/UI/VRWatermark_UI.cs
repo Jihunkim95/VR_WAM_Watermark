@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Linq;
 
-public class VRCreationProtectionUI : MonoBehaviour
+public class VRWatermark_UI : MonoBehaviour
 {
     [Header("UI Canvas")]
     [SerializeField] private Canvas artProtectionCanvas;
@@ -18,9 +18,9 @@ public class VRCreationProtectionUI : MonoBehaviour
     [SerializeField] private bool createUIAutomatically = true;
     [SerializeField] private bool showAllArtViews = true;
 
-    private VRCreationProtectionSystem protectionSystem;
+    private VRWatermark_Realtime protectionSystem;
     private List<GameObject> artViewItems = new List<GameObject>();
-    private List<VRCreationProtectionSystem.ArtworkProtectionResult> protectionHistory = new List<VRCreationProtectionSystem.ArtworkProtectionResult>();
+    private List<VRWatermark_Realtime.ArtworkProtectionResult> protectionHistory = new List<VRWatermark_Realtime.ArtworkProtectionResult>();
 
     // UI 스타일 설정
     private Color artBackgroundColor = new Color(0.08f, 0.08f, 0.12f, 0.95f);
@@ -31,7 +31,7 @@ public class VRCreationProtectionUI : MonoBehaviour
     void Start()
     {
         // VR 아트 보호 시스템 찾기
-        protectionSystem = FindObjectOfType<VRCreationProtectionSystem>();
+        protectionSystem = FindObjectOfType<VRWatermark_Realtime>();
 
         if (protectionSystem != null)
         {
@@ -58,7 +58,7 @@ public class VRCreationProtectionUI : MonoBehaviour
         // 메인 Canvas 생성
         if (artProtectionCanvas == null)
         {
-            GameObject canvasGO = new GameObject("VRCreationProtectionUI_Canvas");
+            GameObject canvasGO = new GameObject("VRWatermark_UI_Canvas");
             artProtectionCanvas = canvasGO.AddComponent<Canvas>();
             artProtectionCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
             artProtectionCanvas.sortingOrder = 100;
@@ -292,7 +292,7 @@ public class VRCreationProtectionUI : MonoBehaviour
         return labelGO;
     }
 
-    void DisplayArtworkProtectionResult(VRCreationProtectionSystem.ArtworkProtectionResult result)
+    void DisplayArtworkProtectionResult(VRWatermark_Realtime.ArtworkProtectionResult result)
     {
         // 히스토리에 추가
         protectionHistory.Add(result);
@@ -321,7 +321,7 @@ public class VRCreationProtectionUI : MonoBehaviour
         Debug.Log($"VR 아트워크 보호 결과 UI 업데이트 완료 - 방향: {result.primaryDirection}");
     }
 
-    void UpdateCreationInfoDisplay(VRCreationProtectionSystem.ArtworkProtectionResult result)
+    void UpdateCreationInfoDisplay(VRWatermark_Realtime.ArtworkProtectionResult result)
     {
         string info = "=== VR 아트 창작 보호 결과 ===\n\n";
 
@@ -363,7 +363,7 @@ public class VRCreationProtectionUI : MonoBehaviour
         creationInfoText.text = info;
     }
 
-    void UpdateArtViewsDisplay(Dictionary<VRCreationProtectionSystem.ArtViewDirection, float> viewScores, VRCreationProtectionSystem.ArtViewDirection primaryDirection)
+    void UpdateArtViewsDisplay(Dictionary<VRWatermark_Realtime.ArtViewDirection, float> viewScores, VRWatermark_Realtime.ArtViewDirection primaryDirection)
     {
         // 기존 아이템들 제거
         foreach (GameObject item in artViewItems)
@@ -383,7 +383,7 @@ public class VRCreationProtectionUI : MonoBehaviour
         }
     }
 
-    void CreateArtViewItem(VRCreationProtectionSystem.ArtViewDirection direction, float qualityScore, bool isPrimary)
+    void CreateArtViewItem(VRWatermark_Realtime.ArtViewDirection direction, float qualityScore, bool isPrimary)
     {
         GameObject itemGO = new GameObject($"ArtViewItem_{direction}");
         itemGO.transform.SetParent(artViewsPanel, false);
@@ -465,16 +465,16 @@ public class VRCreationProtectionUI : MonoBehaviour
         artViewItems.Add(itemGO);
     }
 
-    string GetArtViewDisplayName(VRCreationProtectionSystem.ArtViewDirection direction)
+    string GetArtViewDisplayName(VRWatermark_Realtime.ArtViewDirection direction)
     {
         switch (direction)
         {
-            case VRCreationProtectionSystem.ArtViewDirection.MainView: return "주요뷰";
-            case VRCreationProtectionSystem.ArtViewDirection.DetailView: return "디테일";
-            case VRCreationProtectionSystem.ArtViewDirection.ProfileLeft: return "좌측";
-            case VRCreationProtectionSystem.ArtViewDirection.ProfileRight: return "우측";
-            case VRCreationProtectionSystem.ArtViewDirection.TopView: return "상단";
-            case VRCreationProtectionSystem.ArtViewDirection.BottomView: return "하단";
+            case VRWatermark_Realtime.ArtViewDirection.MainView: return "주요뷰";
+            case VRWatermark_Realtime.ArtViewDirection.DetailView: return "디테일";
+            case VRWatermark_Realtime.ArtViewDirection.ProfileLeft: return "좌측";
+            case VRWatermark_Realtime.ArtViewDirection.ProfileRight: return "우측";
+            case VRWatermark_Realtime.ArtViewDirection.TopView: return "상단";
+            case VRWatermark_Realtime.ArtViewDirection.BottomView: return "하단";
             default: return direction.ToString();
         }
     }
@@ -505,7 +505,7 @@ public class VRCreationProtectionUI : MonoBehaviour
         }
     }
 
-    void CreateHistoryItem(VRCreationProtectionSystem.ArtworkProtectionResult result, int index)
+    void CreateHistoryItem(VRWatermark_Realtime.ArtworkProtectionResult result, int index)
     {
         GameObject itemGO = new GameObject($"HistoryItem_{index}");
         itemGO.transform.SetParent(creationHistoryPanel, false);
@@ -554,7 +554,7 @@ public class VRCreationProtectionUI : MonoBehaviour
         info.alignment = TextAnchor.UpperCenter;
     }
 
-    void OnCreationMilestone(VRCreationProtectionSystem.CreationMetadata metadata)
+    void OnCreationMilestone(VRWatermark_Realtime.CreationMetadata metadata)
     {
         Debug.Log($"🎯 창작 마일스톤 달성! 복잡도: {metadata.artworkComplexity:F3}, 스트로크: {metadata.totalBrushStrokes}");
 

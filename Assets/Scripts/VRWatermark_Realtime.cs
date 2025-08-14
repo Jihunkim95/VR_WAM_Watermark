@@ -12,7 +12,7 @@ using UnityEngine.XR;
 using UnityEngine.InputSystem;
 #endif
 
-public class VRCreationProtectionSystem : MonoBehaviour
+public class VRWatermark_Realtime : MonoBehaviour
 {
     [Header("Artist Information")]
     [SerializeField] private string artistID = "Artist_001";

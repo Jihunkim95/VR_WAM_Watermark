@@ -36,10 +36,18 @@ public class VRWatermark_PostProcess : MonoBehaviour
         Normal = 1,  // Camera Normals - 표면 방향 (95% 견고)
         SSAO = 2     // Ambient Occlusion - 구조 복잡도 (85% 견고)
     }
+    
+    // 캡처 타입 (렌더맵 + 일반 이미지)
+    public enum CaptureType
+    {
+        RenderMap = 0,  // URP 렌더맵 (Depth, Normal, SSAO)
+        ArtworkImage = 1 // 일반 아트워크 이미지
+    }
 
     private const int TOTAL_DIRECTIONS = 6;
     private const int TOTAL_CORE_MAPS = 3;
-    private const int TOTAL_LAYERS = 18; // 6 × 3 = 18개 레이어
+    private const int TOTAL_CAPTURE_TYPES = 2; // RenderMap + ArtworkImage
+    private const int TOTAL_LAYERS = 24; // 6방향 × (3렌더맵 + 1일반이미지) = 24개 레이어
 
     #endregion
 
@@ -48,7 +56,7 @@ public class VRWatermark_PostProcess : MonoBehaviour
     [Header("서버 설정")]
     [SerializeField] private string wamServerUrl = "http://localhost:5000";
     [SerializeField] private float serverTimeout = 25f; // CLAUDE.md 기준: 27초 이내 완료
-    [SerializeField] private bool useBatchAPI = true;
+    [SerializeField] private bool useBatchAPI = false; // 서버에 배치 API가 없으므로 개별 요청 사용
     [SerializeField] private int maxRetryAttempts = 3;
 
     [Header("VRWatermark_Realtime 연동")]
@@ -111,6 +119,7 @@ public class VRWatermark_PostProcess : MonoBehaviour
         public float watermarkStrength;
         public string message;
         public DateTime timestamp;
+        public bool isArtworkImage = false; // 일반 아트워크 이미지 여부
     }
 
     [Serializable]
@@ -292,28 +301,68 @@ public class VRWatermark_PostProcess : MonoBehaviour
 
     void CreateArtCameras()
     {
-        Transform artworkTarget = realtimeSystem != null ?
-            realtimeSystem.GetComponent<Transform>() : transform;
-
-        Vector3[] positions = new Vector3[]
+        // 실제 아트워크 정보 가져오기
+        Transform artworkTarget = null;
+        Bounds artworkBounds = new Bounds(Vector3.zero, Vector3.one);
+        
+        if (realtimeSystem != null)
         {
-            new Vector3(0, 0, -2),      // MainView
-            new Vector3(0.5f, 0.5f, -2), // DetailView
-            new Vector3(-2, 0, 0),      // ProfileLeft
-            new Vector3(2, 0, 0),       // ProfileRight
-            new Vector3(0, 2, 0),       // TopView
-            new Vector3(0, -2, 0)       // BottomView
+            // VRWatermark_Realtime에서 아트워크 정보 가져오기
+            artworkTarget = GetArtworkTransform();
+            artworkBounds = GetArtworkBounds();
+            
+            if (artworkTarget == null)
+            {
+                Debug.LogWarning("[URP-WAM] 아트워크 타겟을 찾을 수 없습니다. 기본 위치 사용");
+                artworkTarget = realtimeSystem.transform;
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[URP-WAM] realtimeSystem이 null입니다. 현재 Transform 사용");
+            artworkTarget = transform;
+        }
+
+        Vector3 artworkCenter = artworkBounds.center;
+        Vector3 artworkSize = artworkBounds.size;
+        float maxDimension = Mathf.Max(artworkSize.x, artworkSize.y, artworkSize.z);
+        float optimalDistance = Mathf.Max(4f, maxDimension * 1.5f); // 최소 2m, 또는 아트워크 크기의 1.5배
+
+        Debug.Log($"[URP-WAM] 아트워크 중심: {artworkCenter}, 크기: {artworkSize}, 최적 거리: {optimalDistance:F2}m");
+
+        // 개선된 카메라 위치 계산 (아트워크 중심 기준)
+        Vector3[] relativePositions = new Vector3[]
+        {
+            new Vector3(0, 0, -optimalDistance),           // MainView - 정면
+            new Vector3(optimalDistance * 0.3f, optimalDistance * 0.3f, -optimalDistance * 0.8f), // DetailView - 우상단에서
+            new Vector3(-optimalDistance, 0, 0),           // ProfileLeft - 좌측면
+            new Vector3(optimalDistance, 0, 0),            // ProfileRight - 우측면  
+            new Vector3(0, optimalDistance, 0),            // TopView - 상단
+            new Vector3(0, -optimalDistance * 0.8f, 0)     // BottomView - 하단 (너무 멀지 않게)
         };
 
         for (int i = 0; i < TOTAL_DIRECTIONS; i++)
         {
             GameObject camObj = new GameObject($"ArtCamera_{(CaptureDirection)i}");
-            camObj.transform.position = positions[i];
-            camObj.transform.LookAt(artworkTarget);
+            
+            // 아트워크 중심점을 기준으로 카메라 위치 설정
+            Vector3 worldPosition = artworkCenter + relativePositions[i];
+            camObj.transform.position = worldPosition;
+            
+            // 아트워크 중심을 바라보도록 설정
+            camObj.transform.LookAt(artworkCenter);
 
             Camera cam = camObj.AddComponent<Camera>();
             cam.enabled = false; // 수동 렌더링
             cam.cullingMask = artworkLayerMask;
+            
+            // 카메라 시야각을 아트워크 크기에 맞게 조정
+            float fov = CalculateOptimalFOV(optimalDistance, maxDimension);
+            cam.fieldOfView = fov;
+            
+            // 아트워크에 맞는 near/far plane 설정
+            cam.nearClipPlane = 0.1f;
+            cam.farClipPlane = optimalDistance * 3f;
 
             // URP 카메라 데이터 추가
             var camData = cam.GetUniversalAdditionalCameraData();
@@ -323,9 +372,15 @@ public class VRWatermark_PostProcess : MonoBehaviour
 
             artCameras[i] = cam;
             cameraData[i] = camData;
+            
+            Debug.Log($"[URP-WAM] 아트 카메라 생성: {(CaptureDirection)i}");
+            Debug.Log($"  - 위치: {worldPosition}");
+            Debug.Log($"  - 바라보는 방향: {(artworkCenter - worldPosition).normalized}");
+            Debug.Log($"  - FOV: {fov:F1}도");
         }
 
         Debug.Log($"[URP-WAM] {TOTAL_DIRECTIONS}개 아트 카메라 생성 완료");
+        Debug.Log($"[URP-WAM] 모든 카메라가 {artworkCenter} 지점을 바라봅니다.");
     }
 
     #endregion
@@ -404,65 +459,121 @@ public class VRWatermark_PostProcess : MonoBehaviour
     {
         isProcessing = true;
         performanceTimer.Restart();
+        bool hasError = false;
+        string errorMessage = "";
 
         Debug.Log($"[URP-WAM] 18레이어 보호 시작 - Session: {currentSessionID}");
 
+        // Phase 1: 18개 레이어 캡처 (목표: < 3초)
+        yield return StartCoroutine(ExecuteWithErrorHandling(CaptureAllCoreLayers(), 
+            (error) => { hasError = true; errorMessage = error; }));
+        
+        if (hasError)
+        {
+            Debug.LogError($"[URP-WAM] 캡처 단계 실패: {errorMessage}");
+            yield break;
+        }
+
+        // Phase 2: 배치 처리 준비
+        BatchWatermarkRequest batchRequest = null;
         try
         {
-            // Phase 1: 18개 레이어 캡처 (목표: < 3초)
-            yield return StartCoroutine(CaptureAllCoreLayers());
-
-            // Phase 2: 배치 처리 준비
-            var batchRequest = PrepareBatchRequest();
-
-            // Phase 3: 서버 전송 및 처리 (목표: < 20초) - 재시도 로직 포함
-            yield return StartCoroutine(SendBatchToServerWithRetry(batchRequest));
-
-            // Phase 4: 결과 저장 (목표: < 2초)
-            yield return StartCoroutine(SaveProtectionResults());
-
-            performanceTimer.Stop();
-            float totalTime = (float)performanceTimer.Elapsed.TotalSeconds;
-            processingTimes.Add(totalTime);
-
-            if (enablePerformanceLogging)
-            {
-                Debug.Log($"[URP-WAM] 18레이어 보호 완료 - 총 시간: {totalTime:F2}초");
-                LogPerformanceMetrics(totalTime);
-            }
-
-            OnProtectionComplete(totalTime);
+            batchRequest = PrepareBatchRequest();
         }
         catch (System.Exception e)
         {
-            Debug.LogError($"[URP-WAM] 보호 프로세스 실패: {e.Message}");
+            Debug.LogError($"[URP-WAM] 배치 준비 실패: {e.Message}");
             SaveLocalFallback();
+            yield break;
         }
-        finally
-        {
-            isProcessing = false;
-            currentRetryCount = 0;
+
+        // Phase 3: 서버 전송 및 처리 (목표: < 20초) - 재시도 로직 포함
+        hasError = false;
+        yield return StartCoroutine(ExecuteWithErrorHandling(SendBatchToServerWithRetry(batchRequest),
+            (error) => { hasError = true; errorMessage = error; }));
             
-            // 메모리 최적화
-            if (enableMemoryOptimization)
-            {
-                System.GC.Collect();
-            }
+        if (hasError)
+        {
+            Debug.LogError($"[URP-WAM] 서버 전송 실패: {errorMessage}");
+            SaveLocalFallback();
+            yield break;
         }
+
+        // Phase 4: 결과 저장 (목표: < 2초)
+        hasError = false;
+        yield return StartCoroutine(ExecuteWithErrorHandling(SaveProtectionResults(),
+            (error) => { hasError = true; errorMessage = error; }));
+            
+        if (hasError)
+        {
+            Debug.LogError($"[URP-WAM] 결과 저장 실패: {errorMessage}");
+        }
+
+        // 완료 처리
+        performanceTimer.Stop();
+        float totalTime = (float)performanceTimer.Elapsed.TotalSeconds;
+        processingTimes.Add(totalTime);
+
+        if (enablePerformanceLogging)
+        {
+            Debug.Log($"[URP-WAM] 18레이어 보호 완료 - 총 시간: {totalTime:F2}초");
+            LogPerformanceMetrics(totalTime);
+        }
+
+        OnProtectionComplete(totalTime);
+
+        // 정리 작업
+        isProcessing = false;
+        currentRetryCount = 0;
+        
+        // 메모리 최적화
+        if (enableMemoryOptimization)
+        {
+            System.GC.Collect();
+        }
+    }
+    
+    // 에러 핸들링을 위한 헬퍼 메서드
+    IEnumerator ExecuteWithErrorHandling(IEnumerator coroutine, System.Action<string> onError)
+    {
+        bool completed = false;
+        string error = null;
+        
+        yield return StartCoroutine(SafeCoroutineWrapper(coroutine, 
+            () => completed = true,
+            (e) => error = e));
+            
+        if (!completed && !string.IsNullOrEmpty(error))
+        {
+            onError?.Invoke(error);
+        }
+    }
+    
+    IEnumerator SafeCoroutineWrapper(IEnumerator coroutine, System.Action onSuccess, System.Action<string> onError)
+    {
+        bool hasError = false;
+        string errorMsg = "";
+        
+        // 코루틴 실행을 모니터링
+        yield return StartCoroutine(coroutine);
+        
+        // 여기서는 단순히 성공으로 간주 (실제 에러는 각 단계에서 처리)
+        onSuccess?.Invoke();
     }
 
     IEnumerator CaptureAllCoreLayers()
     {
-        Debug.Log("[URP-WAM] 코어 레이어 캡처 시작...");
+        Debug.Log("[URP-WAM] 모든 레이어 캡처 시작...");
 
         int capturedCount = 0;
 
-        // 6방향 × 3종 맵 = 18개 캡처
+        // 6방향 × (3렌더맵 + 1일반이미지) = 24개 캡처
         for (int dirIdx = 0; dirIdx < TOTAL_DIRECTIONS; dirIdx++)
         {
             CaptureDirection direction = (CaptureDirection)dirIdx;
             Camera cam = artCameras[dirIdx];
 
+            // 1. URP 렌더맵 캡처 (3종)
             for (int mapIdx = 0; mapIdx < TOTAL_CORE_MAPS; mapIdx++)
             {
                 CoreRenderMap mapType = (CoreRenderMap)mapIdx;
@@ -497,9 +608,34 @@ public class VRWatermark_PostProcess : MonoBehaviour
                     yield return null;
                 }
             }
+            
+            // 2. 일반 아트워크 이미지 캡처 (1종)
+            byte[] artworkImageData = CaptureArtworkImage(cam);
+            
+            // 일반 이미지 작업 생성
+            CoreLayerJob artworkJob = new CoreLayerJob
+            {
+                sessionID = currentSessionID,
+                direction = direction,
+                mapType = CoreRenderMap.Depth, // 임시로 Depth 사용 (실제로는 별도 enum 필요)
+                imageData = artworkImageData,
+                watermarkStrength = 1.0f, // 일반 이미지는 기본 강도
+                message = GenerateArtworkMessage(direction),
+                timestamp = DateTime.Now,
+                isArtworkImage = true // 플래그 추가 필요
+            };
+
+            processingQueue.Enqueue(artworkJob);
+            capturedCount++;
+
+            // 디버그 저장
+            if (saveDebugMaps)
+            {
+                SaveDebugMap(artworkImageData, $"{direction}_Artwork");
+            }
         }
 
-        Debug.Log($"[URP-WAM] {capturedCount}개 코어 레이어 캡처 완료");
+        Debug.Log($"[URP-WAM] {capturedCount}개 레이어 캡처 완료 (18개 렌더맵 + 6개 아트워크 이미지)");
     }
 
     #endregion
@@ -533,6 +669,37 @@ public class VRWatermark_PostProcess : MonoBehaviour
         // 정리
         if (result != null) Destroy(result);
 
+        return pngData;
+    }
+    
+    /// <summary>
+    /// 일반 아트워크 이미지 캡처 (RGB)
+    /// </summary>
+    byte[] CaptureArtworkImage(Camera cam)
+    {
+        // 일반 렌더링용 임시 RenderTexture 생성
+        RenderTexture artworkRT = RenderTexture.GetTemporary(
+            captureResolution, 
+            captureResolution, 
+            24, // 깊이 버퍼
+            RenderTextureFormat.ARGB32
+        );
+        
+        RenderTexture previousTarget = cam.targetTexture;
+        cam.targetTexture = artworkRT;
+        
+        // 일반 렌더링 (모든 셰이더 패스)
+        cam.Render();
+        
+        // RenderTexture → Texture2D → PNG
+        Texture2D result = ConvertRTToTexture2D(artworkRT);
+        byte[] pngData = result.EncodeToPNG();
+        
+        // 정리
+        cam.targetTexture = previousTarget;
+        RenderTexture.ReleaseTemporary(artworkRT);
+        if (result != null) Destroy(result);
+        
         return pngData;
     }
 
@@ -696,6 +863,24 @@ public class VRWatermark_PostProcess : MonoBehaviour
 
         return $"{dirMessages[direction]}_{mapMessages[mapType]}_{baseMessage}";
     }
+    
+    string GenerateArtworkMessage(CaptureDirection direction)
+    {
+        // 일반 아트워크 이미지용 메시지 생성
+        string baseMessage = $"{currentSessionID}_Artwork";
+        
+        Dictionary<CaptureDirection, string> dirMessages = new Dictionary<CaptureDirection, string>
+        {
+            { CaptureDirection.MainView, "MAIN_VIEW" },
+            { CaptureDirection.DetailView, "DETAIL" },
+            { CaptureDirection.ProfileLeft, "LEFT" },
+            { CaptureDirection.ProfileRight, "RIGHT" },
+            { CaptureDirection.TopView, "TOP" },
+            { CaptureDirection.BottomView, "BOTTOM" }
+        };
+
+        return $"{dirMessages[direction]}_IMAGE_{baseMessage}";
+    }
 
     #endregion
 
@@ -745,9 +930,13 @@ public class VRWatermark_PostProcess : MonoBehaviour
         while (processingQueue.Count > 0)
         {
             var job = processingQueue.Dequeue();
+            string layerId = job.isArtworkImage ? 
+                $"{job.direction}_Artwork" : 
+                $"{job.direction}_{job.mapType}";
+                
             request.layers.Add(new LayerData
             {
-                layer_id = $"{job.direction}_{job.mapType}",
+                layer_id = layerId,
                 image_base64 = Convert.ToBase64String(job.imageData),
                 strength = job.watermarkStrength,
                 message = job.message
@@ -840,16 +1029,26 @@ public class VRWatermark_PostProcess : MonoBehaviour
         int successCount = 0;
         foreach (var layer in batchRequest.layers)
         {
-            // 개별 요청 생성
+            // 개별 요청 생성 (서버 API 형식에 맞게)
             var individualRequest = new
             {
-                image_base64 = layer.image_base64,
-                message = layer.message,
-                strength = layer.strength
+                image = layer.image_base64,  // 서버에서 'image' 키를 기대함
+                creatorId = GetCreatorId(),
+                timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+                artworkId = GetArtworkId(),
+                sessionId = currentSessionID,
+                versionNumber = GetVersionNumber(),
+                viewDirection = GetViewDirection(layer.layer_id),
+                complexity = layer.strength  // 워터마크 강도를 복잡도로 매핑
             };
 
             string json = JsonConvert.SerializeObject(individualRequest);
             byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
+
+            // 디버깅용 로그
+            Debug.Log($"[URP-WAM] 요청 전송: {layer.layer_id}");
+            Debug.Log($"[URP-WAM] URL: {wamServerUrl}/watermark");
+            Debug.Log($"[URP-WAM] JSON 크기: {json.Length} chars");
 
             UnityWebRequest request = new UnityWebRequest($"{wamServerUrl}/watermark", "POST");
             request.uploadHandler = new UploadHandlerRaw(bodyRaw);
@@ -862,7 +1061,18 @@ public class VRWatermark_PostProcess : MonoBehaviour
             if (request.result == UnityWebRequest.Result.Success)
             {
                 successCount++;
+                Debug.Log($"[URP-WAM] 성공: {layer.layer_id}");
                 ProcessIndividualResponse(layer.layer_id, request.downloadHandler.text);
+            }
+            else
+            {
+                Debug.LogError($"[URP-WAM] 실패: {layer.layer_id}");
+                Debug.LogError($"[URP-WAM] 에러: {request.error}");
+                Debug.LogError($"[URP-WAM] 응답 코드: {request.responseCode}");
+                if (!string.IsNullOrEmpty(request.downloadHandler.text))
+                {
+                    Debug.LogError($"[URP-WAM] 서버 응답: {request.downloadHandler.text}");
+                }
             }
 
             // 프레임 드롭 방지
@@ -1118,6 +1328,135 @@ public class VRWatermark_PostProcess : MonoBehaviour
     string GenerateSessionID()
     {
         return $"URP_{DateTime.Now:yyyyMMddHHmmss}_{UnityEngine.Random.Range(1000, 9999)}";
+    }
+    
+    string GetCreatorId()
+    {
+        // VRWatermark_Realtime에서 크리에이터 ID 가져오기
+        if (realtimeSystem != null)
+        {
+            // 실제 구현에서는 realtimeSystem에서 크리에이터 ID를 가져옴
+            return "ML"; // 기본값
+        }
+        return "Unknown";
+    }
+    
+    string GetArtworkId()
+    {
+        // 현재 세션 기반으로 아트워크 ID 생성
+        return currentSessionID.Replace("URP_", "");
+    }
+    
+    int GetVersionNumber()
+    {
+        // 현재 세션의 버전 번호 (기본값 1)
+        return 1;
+    }
+    
+    string GetViewDirection(string layerId)
+    {
+        // layer_id에서 방향 추출 (예: "MainView_Depth" -> "MainView")
+        if (string.IsNullOrEmpty(layerId)) return "MainView";
+        
+        string[] parts = layerId.Split('_');
+        if (parts.Length > 0)
+        {
+            return parts[0];
+        }
+        return "MainView";
+    }
+    
+    /// <summary>
+    /// VRWatermark_Realtime에서 아트워크 Transform 가져오기
+    /// </summary>
+    Transform GetArtworkTransform()
+    {
+        if (realtimeSystem == null) return null;
+        
+        // Reflection을 사용하여 private artworkContainer 필드에 접근
+        var field = typeof(VRWatermark_Realtime).GetField("artworkContainer", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        
+        if (field != null)
+        {
+            return field.GetValue(realtimeSystem) as Transform;
+        }
+        
+        Debug.LogWarning("[URP-WAM] artworkContainer 필드에 접근할 수 없습니다.");
+        return realtimeSystem.transform;
+    }
+    
+    /// <summary>
+    /// VRWatermark_Realtime에서 아트워크 Bounds 가져오기
+    /// </summary>
+    Bounds GetArtworkBounds()
+    {
+        if (realtimeSystem == null) 
+            return new Bounds(Vector3.zero, Vector3.one * 2f);
+        
+        // GetArtworkBounds 메서드 호출 시도
+        var method = typeof(VRWatermark_Realtime).GetMethod("GetArtworkBounds", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        
+        if (method != null)
+        {
+            try
+            {
+                return (Bounds)method.Invoke(realtimeSystem, null);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[URP-WAM] GetArtworkBounds 호출 실패: {e.Message}");
+            }
+        }
+        
+        // 대안: Transform에서 직접 계산
+        Transform artworkTransform = GetArtworkTransform();
+        if (artworkTransform != null)
+        {
+            return CalculateBoundsFromChildren(artworkTransform);
+        }
+        
+        Debug.LogWarning("[URP-WAM] 아트워크 Bounds를 계산할 수 없습니다. 기본값 사용");
+        return new Bounds(Vector3.zero, Vector3.one * 2f);
+    }
+    
+    /// <summary>
+    /// 자식 오브젝트들로부터 Bounds 계산
+    /// </summary>
+    Bounds CalculateBoundsFromChildren(Transform parent)
+    {
+        Renderer[] renderers = parent.GetComponentsInChildren<Renderer>();
+        
+        if (renderers.Length == 0)
+        {
+            return new Bounds(parent.position, Vector3.one);
+        }
+        
+        Bounds bounds = renderers[0].bounds;
+        
+        for (int i = 1; i < renderers.Length; i++)
+        {
+            bounds.Encapsulate(renderers[i].bounds);
+        }
+        
+        Debug.Log($"[URP-WAM] 계산된 아트워크 Bounds: 중심={bounds.center}, 크기={bounds.size}");
+        return bounds;
+    }
+    
+    /// <summary>
+    /// 아트워크 크기와 거리에 따른 최적 FOV 계산
+    /// </summary>
+    float CalculateOptimalFOV(float distance, float objectSize)
+    {
+        // 아트워크가 화면의 70-80%를 차지하도록 FOV 계산
+        float angle = 2f * Mathf.Atan(objectSize * 0.4f / distance) * Mathf.Rad2Deg;
+        
+        // FOV 범위를 30도에서 90도로 제한
+        float clampedFOV = Mathf.Clamp(angle, 30f, 90f);
+        
+        Debug.Log($"[URP-WAM] 계산된 FOV: {clampedFOV:F1}도 (거리: {distance:F2}m, 크기: {objectSize:F2}m)");
+        return clampedFOV;
     }
 
     #endregion

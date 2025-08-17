@@ -1,6 +1,6 @@
 # VR WAM Watermark Unity Project
 
-Unity VR 환경에서 실시간 워터마킹 기술을 구현하는 프로젝트입니다. WAM(Watermark Anything) 모델과 연동하여 VR 아트워크에 24레이어 다중 워터마킹을 적용합니다.
+Unity VR 환경에서 실시간 워터마킹 기술을 구현하는 프로젝트입니다. WAM(Watermark Anything) 모델과 연동하여 VR 아트워크에 24레이어 다중 워터마킹을 적용합니다
 
 ## 🎯 프로젝트 개요
 
